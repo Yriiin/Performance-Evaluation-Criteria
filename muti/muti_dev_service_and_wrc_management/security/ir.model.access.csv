@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_preventive_maintenance_user,Preventive Maintenance User,model_preventive_maintenance,base.group_user,1,1,1,0
+access_preventive_maintenance_manager,Preventive Maintenance Manager,model_preventive_maintenance,base.group_system,1,1,1,1
+access_service_performed_user,Service Performed User,model_service_performed,base.group_user,1,1,1,0
+access_service_performed_manager,Service Performed Manager,model_service_performed,base.group_system,1,1,1,1

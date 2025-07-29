@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- WRC Record Sequence -->
+        <record id="seq_wrc_record" model="ir.sequence">
+            <field name="name">WRC Record</field>
+            <field name="code">wrc.record</field>
+            <field name="prefix">WRC</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- Service Coupon Sequence -->
+        <record id="seq_service_coupon" model="ir.sequence">
+            <field name="name">Service Coupon</field>
+            <field name="code">service.coupon</field>
+            <field name="prefix">SC</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- WRC Service Coupon Sequence (legacy support) -->
+        <record id="seq_wrc_service_coupon" model="ir.sequence">
+            <field name="name">WRC Service Coupon</field>
+            <field name="code">wrc.service.coupon</field>
+            <field name="prefix">WSC</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

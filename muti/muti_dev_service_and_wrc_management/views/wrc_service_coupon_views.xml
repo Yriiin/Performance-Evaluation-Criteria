@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- WRC Service Coupon Tree View -->
+    <record id="view_wrc_service_coupon_tree" model="ir.ui.view">
+        <field name="name">wrc.service.coupon.tree</field>
+        <field name="model">wrc.service.coupon</field>
+        <field name="arch" type="xml">
+            <tree decoration-info="state=='draft'" decoration-warning="state=='scheduled'" decoration-success="state=='completed'" decoration-muted="state=='expired'">
+                <field name="coupon_number"/>
+                <field name="wrc_record_id"/>
+                <field name="customer_id"/>
+                <field name="pms_schedule_months"/>
+                <field name="pms_schedule_days"/>
+                <field name="actual_service_date"/>
+                <field name="mileage"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- WRC Service Coupon Form View -->
+    <record id="view_wrc_service_coupon_form" model="ir.ui.view">
+        <field name="name">wrc.service.coupon.form</field>
+        <field name="model">wrc.service.coupon</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,scheduled,completed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="coupon_number"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group string="WRC Information">
+                            <field name="wrc_record_id"/>
+                            <field name="customer_id"/>
+                        </group>
+                        <group string="PMS Schedule">
+                            <field name="pms_schedule_months"/>
+                            <field name="pms_schedule_days"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Service Information">
+                            <field name="actual_service_date"/>
+                            <field name="mileage"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- WRC Service Coupon Search View -->
+    <record id="view_wrc_service_coupon_search" model="ir.ui.view">
+        <field name="name">wrc.service.coupon.search</field>
+        <field name="model">wrc.service.coupon</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="coupon_number"/>
+                <field name="wrc_record_id"/>
+                <field name="customer_id"/>
+                <separator/>
+                <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="scheduled" string="Scheduled" domain="[('state', '=', 'scheduled')]"/>
+                <filter name="completed" string="Completed" domain="[('state', '=', 'completed')]"/>
+                <filter name="expired" string="Expired" domain="[('state', '=', 'expired')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_wrc" string="WRC Record" context="{'group_by': 'wrc_record_id'}"/>
+                    <filter name="group_customer" string="Customer" context="{'group_by': 'customer_id'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- WRC Service Coupon Action -->
+    <record id="action_wrc_service_coupon" model="ir.actions.act_window">
+        <field name="name">WRC Service Coupons</field>
+        <field name="res_model">wrc.service.coupon</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_wrc_service_coupon_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first WRC Service Coupon!
+            </p>
+            <p>
+                WRC Service Coupons are linked to WRC records and track service schedules.
+            </p>
+        </field>
+    </record>
+</odoo>

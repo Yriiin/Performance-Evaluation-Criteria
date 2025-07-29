@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Preventive Maintenance Tree View -->
+    <record id="view_preventive_maintenance_tree" model="ir.ui.view">
+        <field name="name">preventive.maintenance.tree</field>
+        <field name="model">preventive.maintenance</field>
+        <field name="arch" type="xml">
+            <tree decoration-info="state=='draft'" decoration-warning="state=='in_progress'" decoration-success="state=='completed'" decoration-muted="state=='cancelled'">
+                <field name="name"/>
+                <field name="wrc_record_id"/>
+                <field name="customer_id"/>
+                <field name="service_coupon_id"/>
+                <field name="service_date"/>
+                <field name="servicing_branch_id"/>
+                <field name="mileage"/>
+                <field name="mechanic_id"/>
+                <field name="total_service_cost"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Preventive Maintenance Form View -->
+    <record id="view_preventive_maintenance_form" model="ir.ui.view">
+        <field name="name">preventive.maintenance.form</field>
+        <field name="model">preventive.maintenance</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_start_service" type="object" string="Start Service" class="btn-warning" attrs="{'invisible': [('state', '!=', 'draft')]}"/>
+                    <button name="action_complete_service" type="object" string="Complete Service" class="btn-success" attrs="{'invisible': [('state', '!=', 'in_progress')]}"/>
+                    <button name="action_cancel_service" type="object" string="Cancel Service" class="btn-secondary" attrs="{'invisible': [('state', 'in', ['completed', 'cancelled'])]}"/>
+                    <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-primary" attrs="{'invisible': [('state', '=', 'draft')]}"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,completed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group string="WRC and Customer Information">
+                            <field name="wrc_record_id"/>
+                            <field name="customer_id"/>
+                            <field name="service_coupon_id"/>
+                        </group>
+                        <group string="Service Information">
+                            <field name="servicing_branch_id"/>
+                            <field name="service_date"/>
+                            <field name="mileage"/>
+                            <field name="mechanic_id"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Service Summary">
+                            <field name="service_count"/>
+                            <field name="total_service_cost"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Service Description">
+                        <field name="service_description" placeholder="Describe the maintenance service performed" nolabel="1"/>
+                    </group>
+                    
+                    <group string="Parts and Additional Information">
+                        <field name="parts_replaced" placeholder="List parts that were replaced during this service" nolabel="1"/>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Services Performed">
+                            <field name="service_performed_ids">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="service_type"/>
+                                    <field name="service_description"/>
+                                    <field name="mechanic_id"/>
+                                    <field name="cost"/>
+                                    <field name="labor_hours"/>
+                                    <field name="state"/>
+                                </tree>
+                                <form>
+                                    <header>
+                                        <button name="action_start_service" type="object" string="Start" class="btn-warning" attrs="{'invisible': [('state', '!=', 'draft')]}"/>
+                                        <button name="action_complete_service" type="object" string="Complete" class="btn-success" attrs="{'invisible': [('state', '!=', 'in_progress')]}"/>
+                                        <button name="action_cancel_service" type="object" string="Cancel" class="btn-secondary" attrs="{'invisible': [('state', 'in', ['completed', 'cancelled'])]}"/>
+                                        <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,completed"/>
+                                    </header>
+                                    <sheet>
+                                        <div class="oe_title">
+                                            <h1>
+                                                <field name="name"/>
+                                            </h1>
+                                        </div>
+                                        <group>
+                                            <group>
+                                                <field name="service_type"/>
+                                                <field name="mechanic_id"/>
+                                            </group>
+                                            <group>
+                                                <field name="cost"/>
+                                                <field name="labor_hours"/>
+                                                <field name="warranty_period"/>
+                                            </group>
+                                        </group>
+                                        <group string="Service Description">
+                                            <field name="service_description" nolabel="1"/>
+                                        </group>
+                                        <group string="Parts Replaced">
+                                            <field name="parts_replaced" nolabel="1"/>
+                                        </group>
+                                        <group string="Additional Notes">
+                                            <field name="notes" nolabel="1"/>
+                                        </group>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Preventive Maintenance Search View -->
+    <record id="view_preventive_maintenance_search" model="ir.ui.view">
+        <field name="name">preventive.maintenance.search</field>
+        <field name="model">preventive.maintenance</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="wrc_record_id"/>
+                <field name="customer_id"/>
+                <field name="service_coupon_id"/>
+                <field name="mechanic_id"/>
+                <separator/>
+                <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter name="completed" string="Completed" domain="[('state', '=', 'completed')]"/>
+                <filter name="today" string="Today" domain="[('service_date', '=', context_today())]"/>
+                <filter name="this_month" string="This Month" domain="[('service_date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d')), ('service_date', '&lt;', ((context_today().replace(day=1) + relativedelta(months=1)).strftime('%Y-%m-%d')))]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_wrc" string="WRC Record" context="{'group_by': 'wrc_record_id'}"/>
+                    <filter name="group_branch" string="Servicing Branch" context="{'group_by': 'servicing_branch_id'}"/>
+                    <filter name="group_mechanic" string="Mechanic" context="{'group_by': 'mechanic_id'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_date" string="Service Date" context="{'group_by': 'service_date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Preventive Maintenance Action -->
+    <record id="action_preventive_maintenance" model="ir.actions.act_window">
+        <field name="name">Preventive Maintenance (PMS)</field>
+        <field name="res_model">preventive.maintenance</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_preventive_maintenance_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Preventive Maintenance record!
+            </p>
+            <p>
+                Preventive Maintenance (PMS) tracks scheduled maintenance services for motorcycles.
+                Select a WRC record and coupon code to get started.
+            </p>
+        </field>
+    </record>
+</odoo>

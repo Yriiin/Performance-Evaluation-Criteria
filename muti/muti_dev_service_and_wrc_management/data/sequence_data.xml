@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Preventive Maintenance Sequence -->
+        <record id="seq_preventive_maintenance" model="ir.sequence">
+            <field name="name">Preventive Maintenance</field>
+            <field name="code">preventive.maintenance</field>
+            <field name="prefix">PMS</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <!-- Service Performed Sequence -->
+        <record id="seq_service_performed" model="ir.sequence">
+            <field name="name">Service Performed</field>
+            <field name="code">service.performed</field>
+            <field name="prefix">SP</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

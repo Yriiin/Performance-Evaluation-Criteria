@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Service Coupon Tree View -->
+    <record id="view_service_coupon_tree" model="ir.ui.view">
+        <field name="name">service.coupon.tree</field>
+        <field name="model">service.coupon</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="coupon_number"/>
+                <field name="wrc_record_id"/>
+                <field name="pms_schedule_months"/>
+                <field name="pms_schedule_days"/>
+                <field name="actual_service_date"/>
+                <field name="servicing_branch_id"/>
+                <field name="mileage"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Service Coupon Form View -->
+    <record id="view_service_coupon_form" model="ir.ui.view">
+        <field name="name">service.coupon.form</field>
+        <field name="model">service.coupon</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_schedule_service" type="object" string="Schedule Service" class="btn-warning" attrs="{'invisible': [('state', '!=', 'draft')]}"/>
+                    <button name="action_mark_completed" type="object" string="Mark as Completed" class="btn-primary" attrs="{'invisible': [('state', '=', 'completed')]}"/>
+                    <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" attrs="{'invisible': [('state', '=', 'draft')]}"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,scheduled,completed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="coupon_number"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group string="WRC Information">
+                            <field name="wrc_record_id"/>
+                            <field name="servicing_branch_id"/>
+                        </group>
+                        <group string="PMS Schedule">
+                            <field name="pms_schedule_months"/>
+                            <field name="pms_schedule_days"/>
+                            <field name="actual_service_date"/>
+                            <field name="mileage" placeholder="Mileage during PMS"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Service Notes">
+                        <field name="notes" placeholder="Enter any service notes or remarks" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Service Coupon Search View -->
+    <record id="view_service_coupon_search" model="ir.ui.view">
+        <field name="name">service.coupon.search</field>
+        <field name="model">service.coupon</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="coupon_number"/>
+                <field name="wrc_record_id"/>
+                <separator/>
+                <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="scheduled" string="Scheduled" domain="[('state', '=', 'scheduled')]"/>
+                <filter name="completed" string="Completed" domain="[('state', '=', 'completed')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_wrc" string="WRC Record" context="{'group_by': 'wrc_record_id'}"/>
+                    <filter name="group_branch" string="Servicing Branch" context="{'group_by': 'servicing_branch_id'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Service Coupon Action -->
+    <record id="action_service_coupon" model="ir.actions.act_window">
+        <field name="name">Service Coupons</field>
+        <field name="res_model">service.coupon</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_service_coupon_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Service Coupon!
+            </p>
+            <p>
+                Service Coupons track scheduled maintenance for motorcycles.
+                These coupons will be used by your new service module.
+            </p>
+        </field>
+    </record>
+</odoo>

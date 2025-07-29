@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Main Menu -->
+    <menuitem id="menu_service_wrc_management" name="Service &amp; WRC Management" sequence="15"/>
+    
+    <!-- Sub Menus -->
+    <menuitem id="menu_wrc_management" name="WRC Management" parent="menu_service_wrc_management" sequence="10"/>
+    <menuitem id="menu_preventive_maintenance" name="Preventive Maintenance" parent="menu_service_wrc_management" sequence="20"/>
+    <menuitem id="menu_service_records" name="Service Records" parent="menu_service_wrc_management" sequence="30"/>
+    
+    <!-- WRC Management Menu Items -->
+    <menuitem id="menu_wrc_records" name="WRC Records" parent="menu_wrc_management" sequence="10" action="muti_dev_performance_evaluation_criteria.action_wrc_record"/>
+    <menuitem id="menu_wrc_service_coupons" name="Service Coupons" parent="menu_wrc_management" sequence="20" action="muti_dev_performance_evaluation_criteria.action_service_coupon"/>
+    
+    <!-- Preventive Maintenance Menu Items -->
+    <menuitem id="menu_preventive_maintenance_pms" name="PMS Records" parent="menu_preventive_maintenance" sequence="10" action="action_preventive_maintenance"/>
+    <menuitem id="menu_service_performed" name="Services Performed" parent="menu_preventive_maintenance" sequence="20" action="action_service_performed"/>
+    
+    <!-- Service Records Menu Items -->
+    <menuitem id="menu_service_coupons" name="All Service Coupons" parent="menu_service_records" sequence="10" action="muti_dev_performance_evaluation_criteria.action_service_coupon"/>
+</odoo>
