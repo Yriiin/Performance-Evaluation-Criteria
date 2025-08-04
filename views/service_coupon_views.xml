@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Service Coupon Tree View -->
+    <record id="view_service_coupon_tree" model="ir.ui.view">
+        <field name="name">service.coupon.tree</field>
+        <field name="model">service.coupon</field>
+        <field name="arch" type="xml">
+            <tree decoration-warning="state == 'active' and is_overdue" 
+                  decoration-success="state == 'used'"
+                  decoration-muted="state in ['expired', 'disabled']">
+                <field name="coupon_number"/>
+                <field name="wrc_record_id"/>
+                <field name="coupon_type"/>
+                <field name="pms_km_min"/>
+                <field name="pms_km_max"/>
+                <field name="pms_months"/>
+                <field name="due_date"/>
+                <field name="state"/>
+                <field name="is_overdue" invisible="1"/>
+                <field name="actual_service_date"/>
+                <field name="mileage"/>
+                <field name="servicing_branch_id"/>
+                <button name="action_use_coupon" type="object" string="Use" 
+                        icon="fa-cog" attrs="{'invisible': [('can_use', '=', False)]}"/>
+                <field name="can_use" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Service Coupon Form View -->
+    <record id="view_service_coupon_form" model="ir.ui.view">
+        <field name="name">service.coupon.form</field>
+        <field name="model">service.coupon</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_use_coupon" type="object" string="Use Coupon" 
+                            class="oe_highlight" attrs="{'invisible': [('can_use', '=', False)]}"/>
+                    <button name="action_reset_to_active" type="object" string="Reset to Active" 
+                            attrs="{'invisible': [('state', '!=', 'used')]}"/>
+                    <button name="action_disable" type="object" string="Disable" 
+                            attrs="{'invisible': [('state', '!=', 'active')]}"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,used"/>
+                </header>
+                
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="coupon_number" placeholder="Coupon Number"/>
+                        </h1>
+                    </div>
+                    
+                    <!-- Alert for overdue coupons -->
+                    <div class="alert alert-warning" role="alert" 
+                         attrs="{'invisible': [('is_overdue', '=', False)]}">
+                        <strong>OVERDUE:</strong> This coupon is past its due date and cannot be used.
+                    </div>
+                    
+                    <group>
+                        <group string="Coupon Information">
+                            <field name="wrc_record_id"/>
+                            <field name="coupon_type"/>
+                            <field name="due_date"/>
+                            <field name="is_overdue"/>
+                            <field name="can_use"/>
+                        </group>
+                        <group string="PMS Schedule">
+                            <field name="pms_km_min"/>
+                            <field name="pms_km_max"/>
+                            <field name="pms_months"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Service Information" attrs="{'invisible': [('state', '!=', 'used')]}">
+                        <group>
+                            <field name="servicing_branch_id"/>
+                            <field name="fsc_sequence"/>
+                            <field name="fsc_code"/>
+                            <field name="actual_service_date"/>
+                            <field name="accept_date"/>
+                        </group>
+                        <group>
+                            <field name="mileage"/>
+                            <field name="service_notes"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Service Coupon Search View -->
+    <record id="view_service_coupon_search" model="ir.ui.view">
+        <field name="name">service.coupon.search</field>
+        <field name="model">service.coupon</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="coupon_number"/>
+                <field name="wrc_record_id"/>
+                <field name="coupon_type"/>
+                <field name="servicing_branch_id"/>
+                <separator/>
+                <filter name="active" string="Active" domain="[('state', '=', 'active')]"/>
+                <filter name="used" string="Used" domain="[('state', '=', 'used')]"/>
+                <filter name="expired" string="Expired" domain="[('state', '=', 'expired')]"/>
+                <filter name="overdue" string="Overdue" domain="[('is_overdue', '=', True)]"/>
+                <separator/>
+                <filter name="pms1" string="PMS 1" domain="[('coupon_type', '=', 'pms_1')]"/>
+                <filter name="pms2" string="PMS 2" domain="[('coupon_type', '=', 'pms_2')]"/>
+                <filter name="pms3" string="PMS 3" domain="[('coupon_type', '=', 'pms_3')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_wrc" string="WRC Record" context="{'group_by': 'wrc_record_id'}"/>
+                    <filter name="group_type" string="Coupon Type" context="{'group_by': 'coupon_type'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_branch" string="Servicing Branch" context="{'group_by': 'servicing_branch_id'}"/>
+                    <filter name="group_due_date" string="Due Date" context="{'group_by': 'due_date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Service Coupon Action -->
+    <record id="action_service_coupon" model="ir.actions.act_window">
+        <field name="name">Service Coupons</field>
+        <field name="res_model">service.coupon</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_service_coupon_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No service coupons found!
+            </p>
+            <p>
+                Service coupons are automatically created when WRC records are generated.
+                They follow the PMS schedule based on motorcycle purchase date and mileage requirements.
+            </p>
+        </field>
+    </record>
+
+    <!-- Service Coupon Use Wizard Form -->
+    <record id="view_service_coupon_use_wizard_form" model="ir.ui.view">
+        <field name="name">service.coupon.use.wizard.form</field>
+        <field name="model">service.coupon.use.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <group string="Coupon Information">
+                        <field name="coupon_id" readonly="1"/>
+                        <field name="coupon_type"/>
+                        <field name="pms_km_min"/>
+                        <field name="pms_km_max"/>
+                        <field name="due_date"/>
+                    </group>
+                    <group string="Service Details">
+                        <field name="servicing_branch_id"/>
+                        <field name="fsc_sequence"/>
+                        <field name="fsc_code"/>
+                        <field name="actual_service_date"/>
+                        <field name="accept_date"/>
+                        <field name="mileage"/>
+                    </group>
+                </group>
+                <group>
+                    <field name="service_notes" placeholder="Enter service notes..."/>
+                </group>
+                <footer>
+                    <button name="action_use_coupon" type="object" string="Use Coupon" class="oe_highlight"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_service_coupons" name="Service Coupons" parent="menu_wrc_root" action="action_service_coupon" sequence="20"/>
+</odoo>

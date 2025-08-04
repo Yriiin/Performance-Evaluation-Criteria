@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- WRC Integration for Sale Order -->
+    <record id="view_sale_order_wrc" model="ir.ui.view">
+        <field name="name">sale.order.wrc</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Add WRC button to button_box -->
+            <div name="button_box" position="inside">
+                <button name="action_view_wrc" type="object" class="oe_stat_button" icon="fa-id-card" 
+                        attrs="{'invisible': [('has_wrc', '=', False)]}">
+                    <field name="wrc_count" widget="statinfo" string="WRC Record"/>
+                </button>
+                <button name="action_view_coupons" type="object" class="oe_stat_button" icon="fa-ticket" 
+                        attrs="{'invisible': [('has_wrc', '=', False)]}">
+                    <field name="coupon_count" widget="statinfo" string="Service Coupons"/>
+                </button>
+            </div>
+            
+            <!-- Add WRC notebook tab - Only show for Motorcycle sales -->
+            <notebook position="inside">
+                <!-- WRC Information Tab - Show for motorcycle sales -->
+                <page string="WRC Information" name="wrc_information" 
+                      attrs="{'invisible': [('is_mc_sale', '=', False)]}"
+                      onchange="action_refresh_wrc_data">
+                    
+                    <!-- Auto-fill status and controls -->
+                    <div class="alert alert-info" role="alert" 
+                         attrs="{'invisible': [('wrc_data_available', '=', False)]}">
+                        <strong>Auto-Fill Status:</strong> Delivery data is available for WRC auto-fill.
+                        <button name="action_auto_fill_wrc" type="object" class="btn btn-sm btn-primary ml-2">
+                            <i class="fa fa-refresh"/> Refresh Data
+                        </button>
+                    </div>
+                    
+                    <!-- Auto-save notification -->
+                    <div class="alert alert-success" role="alert" 
+                         attrs="{'invisible': [('wrc_transferred', '=', False)]}">
+                        <strong>WRC Auto-Created:</strong> A WRC record has been automatically created for this motorcycle sale.
+                    </div>
+                    
+                    <group>
+                        <!-- Customer Profile (Auto-filled, Read-only) -->
+                        <group string="Customer Profile">
+                            <field name="wrc_customer_name"/>
+                            <field name="wrc_address"/>
+                            <field name="wrc_phone"/>
+                            <field name="wrc_email"/>
+                            <field name="wrc_birthday"/>
+                        </group>
+                        
+                        <!-- Dealer Profile (Auto-filled, Read-only) -->
+                        <group string="Dealer Profile">
+                            <field name="wrc_selling_dealer"/>
+                            <field name="wrc_dealer_code"/>
+                            <field name="wrc_dealer_address"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <!-- Unit Info (Some fields editable if incomplete) -->
+                        <group string="Unit Information">
+                            <field name="wrc_model"/>
+                            <field name="wrc_engine"/>
+                            <field name="wrc_frame"/>
+                            <field name="wrc_purchase_date"/>
+                            <field name="wrc_color"/>
+                            <field name="wrc_brand"/>
+                            <field name="wrc_payment_basis"/>
+                            <field name="wrc_qty"/>
+                            <field name="wrc_classification"/>
+                        </group>
+                    </group>
+
+                    <!-- Control Fields -->
+                    <group>
+                        <field name="has_wrc" invisible="1"/>
+                        <field name="is_mc_sale" invisible="1"/>
+                        <field name="wrc_transferred" invisible="1"/>
+                        <field name="wrc_auto_filled" invisible="1"/>
+                        <field name="wrc_data_available" invisible="1"/>
+                    </group>
+                </page>
+            </notebook>
+        </field>
+    </record>
+</odoo>
