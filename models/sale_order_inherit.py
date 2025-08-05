@@ -41,13 +41,19 @@ class SaleOrderInherit(models.Model):
     wrc_classification = fields.Selection([
         ('commuter', 'Commuter'),
         ('bigbike', 'BigBike')
-    ], string='Classification', compute='_compute_classification', store=True)
+    ], string='Classification', readonly=False)
     
     # === CONTROL FIELDS ===
+    awb_sale_type = fields.Selection([
+        ('mc', 'Motorcycle'),
+        ('sp', 'Spare Parts'),
+        ('labour', 'Labour')
+    ], string='Sale Type', compute='_compute_awb_sale_type', store=True)
     has_wrc = fields.Boolean('Has WRC', compute='_compute_has_wrc')
     wrc_count = fields.Integer('WRC Count', compute='_compute_wrc_count')
     coupon_count = fields.Integer('Coupon Count', compute='_compute_coupon_count')
     is_mc_sale = fields.Boolean('Is Motorcycle Sale', compute='_compute_sale_type', store=True)
+    show_wrc = fields.Boolean('Show WRC', compute='_compute_show_wrc', store=True)
     wrc_transferred = fields.Boolean('WRC Transferred', default=False)
     wrc_auto_filled = fields.Boolean('WRC Auto-filled', default=False)
     wrc_data_available = fields.Boolean('WRC Data Available', compute='_compute_wrc_data_available')
@@ -68,12 +74,15 @@ class SaleOrderInherit(models.Model):
             if (record.is_mc_sale and 
                 record.invoice_status == 'invoiced' and 
                 not record.wrc_transferred):
-                record._create_wrc_record()
-                record.wrc_transferred = True
+                # Check if WRC record already exists
+                existing_wrc = record.wrc_records.filtered(lambda r: r.state != 'cancelled')
+                if not existing_wrc:
+                    record._create_wrc_record()
+                    record.wrc_transferred = True
 
-    @api.depends('is_mc_sale')
+    @api.depends('is_mc_sale', 'order_line', 'order_line.product_id')
     def _compute_brand(self):
-        """Compute brand from product internal reference (first 2 chars)"""
+        """Compute brand from product internal reference (first 2 chars) and auto-fill other WRC data"""
         for order in self:
             if order.is_mc_sale:
                 mc_line = order.order_line.filtered(lambda l: order._is_mc_product(l.product_id))
@@ -112,58 +121,6 @@ class SaleOrderInherit(models.Model):
                     order.wrc_brand = False
             else:
                 order.wrc_brand = False
-
-    @api.depends('is_mc_sale')  
-    def _compute_classification(self):
-        """Compute classification based on specific motorcycle models"""
-        for order in self:
-            if order.is_mc_sale:
-                mc_line = order.order_line.filtered(lambda l: order._is_mc_product(l.product_id))
-                if mc_line:
-                    mc_product = mc_line[0].product_id
-                    product_name = mc_product.name.upper()
-                    model_code = mc_product.default_code.upper() if mc_product.default_code else ''
-                    
-                    # BigBike models
-                    bigbike_models = [
-                        'CB500X', 'X-ADV750', 'CRF1100L', 'CRF1100', 'CB500F', 'CB650R', 
-                        'CB1000R', 'CBR500R', 'CBR650R', 'CBR1000RR', 'CMX500', 'GL1800'
-                    ]
-                    
-                    # Commuter models  
-                    commuter_models = [
-                        'BEAT110', 'DIO110', 'CLICK125', 'CLICK150', 'ADV150', 'PCX160',
-                        'WAVE110', 'XRM125', 'RS125', 'RS150', 'GTR150', 'SUPRA',
-                        'CRF150', 'XR150', 'CB150X', 'CRF250', 'TMX125', 'TMX150'
-                    ]
-                    
-                    classification = False
-                    
-                    # Check for BigBike
-                    for model in bigbike_models:
-                        if model in product_name or model in model_code:
-                            classification = 'bigbike'
-                            break
-                    
-                    # Check for Commuter if not BigBike
-                    if not classification:
-                        for model in commuter_models:
-                            if model in product_name or model in model_code:
-                                classification = 'commuter'
-                                break
-                    
-                    # Default fallback based on engine size
-                    if not classification:
-                        if any(size in product_name for size in ['500', '650', '750', '1000', '1100']):
-                            classification = 'bigbike'
-                        else:
-                            classification = 'commuter'
-                    
-                    order.wrc_classification = classification
-                else:
-                    order.wrc_classification = False
-            else:
-                order.wrc_classification = False
 
     def action_auto_fill_wrc(self):
         """Manual button to auto-fill WRC data from picking/lot info"""
@@ -314,62 +271,77 @@ class SaleOrderInherit(models.Model):
                 self.wrc_payment_basis = 'cash'  # Default to cash if no payment term
                 _logger.info("WRC Auto-fill: No payment term found, defaulting to cash")
             
-            # 7. Grab CLASSIFICATION from x_studio_serial_class_txt or product matching
-            classification = False
-            
-            # First try: from lot field
-            if lot_info and hasattr(lot_info, 'x_studio_serial_class_txt'):
-                lot_class = lot_info.x_studio_serial_class_txt
-                if lot_class:
-                    if 'commuter' in lot_class.lower():
-                        classification = 'commuter'
-                    elif 'bigbike' in lot_class.lower() or 'big bike' in lot_class.lower():
-                        classification = 'bigbike'
-            
-            # Second try: classify by product name/model
-            if not classification and mc_product:
-                product_name = mc_product.name.upper()
-                model_code = mc_product.default_code.upper() if mc_product.default_code else ''
-                
-                # BigBike models
-                bigbike_models = [
-                    'CB500X', 'X-ADV750', 'CRF1100L', 'CRF1100', 'CB500F', 'CB650R', 
-                    'CB1000R', 'CBR500R', 'CBR650R', 'CBR1000RR', 'CMX500', 'GL1800'
-                ]
-                
-                # Commuter models  
-                commuter_models = [
-                    'BEAT110', 'DIO110', 'CLICK125', 'CLICK150', 'ADV150', 'PCX160',
-                    'WAVE110', 'XRM125', 'RS125', 'RS150', 'GTR150', 'SUPRA',
-                    'CRF150', 'XR150', 'CB150X', 'CRF250', 'TMX125', 'TMX150'
-                ]
-                
-                # Check for BigBike
-                for model in bigbike_models:
-                    if model in product_name or model in model_code:
-                        classification = 'bigbike'
-                        break
-                
-                # Check for Commuter if not BigBike
-                if not classification:
-                    for model in commuter_models:
-                        if model in product_name or model in model_code:
-                            classification = 'commuter'
-                            break
-                
-                # Default fallback based on engine size indicators
-                if not classification:
-                    if any(size in product_name for size in ['500', '650', '750', '1000', '1100']):
-                        classification = 'bigbike'
-                    else:
-                        classification = 'commuter'
-            
-            if classification:
-                self.wrc_classification = classification
-            
             # Set purchase date from order date
             if not self.wrc_purchase_date and self.date_order:
                 self.wrc_purchase_date = self.date_order.date()
+            
+            # === DEALER PROFILE AUTO-FILL ===
+            # Set dealer information from sale order/company
+            if not self.wrc_selling_dealer and self.company_id:
+                self.wrc_selling_dealer = self.company_id.name
+                _logger.info(f"WRC Auto-fill: Set selling dealer to {self.company_id.name}")
+            
+            if not self.wrc_dealer_code and self.company_id:
+                # Try to extract dealer code from company or use a default pattern
+                if hasattr(self.company_id, 'partner_id') and self.company_id.partner_id.ref:
+                    self.wrc_dealer_code = self.company_id.partner_id.ref
+                else:
+                    # Generate a simple dealer code based on company name
+                    company_name = self.company_id.name.upper()
+                    dealer_code = ''.join(word[:2] for word in company_name.split()[:2])
+                    self.wrc_dealer_code = dealer_code
+                _logger.info(f"WRC Auto-fill: Set dealer code to {self.wrc_dealer_code}")
+            
+            if not self.wrc_dealer_address and self.company_id:
+                # Build dealer address from company address
+                address_parts = []
+                if self.company_id.street:
+                    address_parts.append(self.company_id.street)
+                if self.company_id.street2:
+                    address_parts.append(self.company_id.street2)
+                if self.company_id.city:
+                    address_parts.append(self.company_id.city)
+                if self.company_id.state_id:
+                    address_parts.append(self.company_id.state_id.name)
+                if self.company_id.zip:
+                    address_parts.append(self.company_id.zip)
+                if self.company_id.country_id:
+                    address_parts.append(self.company_id.country_id.name)
+                
+                self.wrc_dealer_address = ', '.join(address_parts)
+                _logger.info(f"WRC Auto-fill: Set dealer address")
+            
+            # === CUSTOMER PROFILE AUTO-FILL ===
+            # Set customer information from partner (customer_name is computed automatically)
+            if not self.wrc_address and self.partner_id:
+                # Build customer address from partner address
+                address_parts = []
+                if self.partner_id.street:
+                    address_parts.append(self.partner_id.street)
+                if self.partner_id.street2:
+                    address_parts.append(self.partner_id.street2)
+                if self.partner_id.city:
+                    address_parts.append(self.partner_id.city)
+                if self.partner_id.state_id:
+                    address_parts.append(self.partner_id.state_id.name)
+                if self.partner_id.zip:
+                    address_parts.append(self.partner_id.zip)
+                if self.partner_id.country_id:
+                    address_parts.append(self.partner_id.country_id.name)
+                
+                self.wrc_address = ', '.join(address_parts)
+                _logger.info(f"WRC Auto-fill: Set customer address")
+            
+            if not self.wrc_phone and self.partner_id:
+                if self.partner_id.phone:
+                    self.wrc_phone = self.partner_id.phone
+                elif self.partner_id.mobile:
+                    self.wrc_phone = self.partner_id.mobile
+                _logger.info(f"WRC Auto-fill: Set customer phone")
+            
+            if not self.wrc_email and self.partner_id and self.partner_id.email:
+                self.wrc_email = self.partner_id.email
+                _logger.info(f"WRC Auto-fill: Set customer email")
             
             # Mark as auto-filled
             self.wrc_auto_filled = True
@@ -414,6 +386,38 @@ class SaleOrderInherit(models.Model):
                 _logger.error(f"WRC Auto-fill fallback error: {str(ex)}")
             return True
 
+    def action_refresh_wrc_data(self):
+        """Manual refresh of WRC data and trigger auto-fill"""
+        self.ensure_one()
+        try:
+            _logger.info(f"Manual refresh triggered for order {self.name}")
+            
+            # Force recompute of related fields
+            self._compute_sale_type()
+            self._compute_wrc_data_available()
+            
+            # Trigger auto-fill
+            self.action_auto_fill_wrc()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'WRC data refreshed successfully',
+                    'type': 'success',
+                }
+            }
+        except Exception as e:
+            _logger.error(f"Manual refresh failed for {self.name}: {str(e)}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'Refresh failed: {str(e)}',
+                    'type': 'danger',
+                }
+            }
+
     def action_test_quantity(self):
         """Test method to manually set quantity from order line"""
         self.ensure_one()
@@ -439,6 +443,13 @@ class SaleOrderInherit(models.Model):
                 }
             }
 
+    def action_refresh_wrc_data(self):
+        """Refresh WRC data - called when WRC tab is opened"""
+        self.ensure_one()
+        if self.is_mc_sale and not self.wrc_auto_filled:
+            self.action_auto_fill_wrc()
+        return True
+
     @api.depends('wrc_records')
     def _compute_has_wrc(self):
         for record in self:
@@ -457,26 +468,86 @@ class SaleOrderInherit(models.Model):
                 coupon_count += len(wrc.service_coupon_ids)
             record.coupon_count = coupon_count
 
-    @api.depends('order_line', 'order_line.product_id')
+    @api.depends('awb_sale_type', 'order_line', 'order_line.product_id')
     def _compute_sale_type(self):
-        """Determine if this is a motorcycle sale"""
+        """Determine if this is a motorcycle sale based on awb_sale_type or product analysis"""
         for record in self:
-            is_mc_sale = False
+            # First try to use awb_sale_type if available and populated
+            if record.awb_sale_type:
+                record.is_mc_sale = (record.awb_sale_type == 'mc')
+            else:
+                # Fallback to product analysis
+                is_mc_sale = False
+                for line in record.order_line:
+                    if record._is_mc_product(line.product_id):
+                        is_mc_sale = True
+                        break
+                record.is_mc_sale = is_mc_sale
+
+    @api.depends('order_line', 'order_line.product_id')
+    def _compute_awb_sale_type(self):
+        """Determine sale type based on product analysis"""
+        for record in self:
+            sale_type = False
             for line in record.order_line:
                 if record._is_mc_product(line.product_id):
-                    is_mc_sale = True
+                    sale_type = 'mc'
                     break
-            record.is_mc_sale = is_mc_sale
+                elif record._is_spare_parts_product(line.product_id):
+                    sale_type = 'sp'
+                elif record._is_labour_product(line.product_id):
+                    sale_type = 'labour'
+            record.awb_sale_type = sale_type
 
-    @api.depends('is_mc_sale')
+    @api.depends('awb_sale_type', 'is_mc_sale', 'state', 'invoice_status')
+    def _compute_show_wrc(self):
+        """Determine if WRC functionality should be visible"""
+        for record in self:
+            # Only show WRC for motorcycle sales with valid invoice status
+            # Check awb_sale_type first, fallback to is_mc_sale for compatibility
+            is_motorcycle = False
+            if record.awb_sale_type:
+                is_motorcycle = (record.awb_sale_type == 'mc')
+            else:
+                is_motorcycle = record.is_mc_sale
+            
+            record.show_wrc = (
+                is_motorcycle and 
+                record.state in ['sale', 'done'] and
+                record.invoice_status in ['invoiced', 'to invoice', 'no']
+            )
+
+    @api.depends('is_mc_sale', 'order_line', 'order_line.product_id', 'state', 'invoice_status')
     def _compute_wrc_data_available(self):
-        """Check if WRC data is available from pickings"""
+        """Check if WRC data is available and trigger auto-fill"""
         for record in self:
             data_available = False
             
             if record.is_mc_sale:
                 # Simple check - just check if it's a MC sale
                 data_available = True
+                
+                # Auto-fill WRC data if not already filled or if fields are empty
+                if not record.wrc_auto_filled or not record.wrc_model or not record.wrc_brand:
+                    try:
+                        _logger.info(f"Triggering auto-fill for order {record.name}")
+                        record.action_auto_fill_wrc()
+                    except Exception as e:
+                        # If auto-fill fails, continue without error
+                        _logger.warning(f"Auto-fill failed for order {record.name}: {str(e)}")
+                
+                # Check for auto-save trigger (fully invoiced motorcycle sale)
+                if record.invoice_status == 'invoiced' and not record.wrc_transferred:
+                    # Check if WRC record already exists
+                    existing_wrc = record.wrc_records.filtered(lambda r: r.state != 'cancelled')
+                    if not existing_wrc:
+                        try:
+                            _logger.info(f"Auto-save triggered for fully invoiced motorcycle sale {record.name}")
+                            record._create_wrc_record_auto()
+                        except Exception as e:
+                            _logger.error(f"Auto-save failed for order {record.name}: {str(e)}")
+                    else:
+                        _logger.info(f"WRC record already exists for {record.name}: {existing_wrc[0].wrc_no}")
             
             record.wrc_data_available = data_available
 
@@ -502,6 +573,42 @@ class SaleOrderInherit(models.Model):
                     return True
         return False
 
+    def _is_spare_parts_product(self, product):
+        """Check if product is spare parts"""
+        if not product:
+            return False
+            
+        name_lower = product.name.lower()
+        if any(kw in name_lower for kw in ['spare', 'parts', 'part', 'component']):
+            return True
+            
+        # Check product category for spare parts
+        if hasattr(product, 'categ_id') and product.categ_id:
+            categ_name = product.categ_id.name.lower()
+            if any(kw in categ_name for kw in ['spare', 'parts', 'sp']):
+                return True
+        return False
+
+    def _is_labour_product(self, product):
+        """Check if product is labour/service"""
+        if not product:
+            return False
+            
+        name_lower = product.name.lower()
+        if any(kw in name_lower for kw in ['labour', 'labor', 'service', 'work']):
+            return True
+            
+        # Check product category for labour
+        if hasattr(product, 'categ_id') and product.categ_id:
+            categ_name = product.categ_id.name.lower()
+            if any(kw in categ_name for kw in ['labour', 'labor', 'service']):
+                return True
+                
+        # Check if it's a service type product
+        if hasattr(product, 'type') and product.type == 'service':
+            return True
+        return False
+
     @api.model
     def create(self, vals):
         """Override create"""
@@ -518,8 +625,17 @@ class SaleOrderInherit(models.Model):
                 if (record.is_mc_sale and 
                     not record.wrc_transferred and 
                     record.invoice_status == 'invoiced'):
-                    record._create_wrc_record_auto()
-                    record.wrc_transferred = True
+                    # Check if WRC record already exists
+                    existing_wrc = record.wrc_records.filtered(lambda r: r.state != 'cancelled')
+                    if not existing_wrc:
+                        try:
+                            _logger.info(f"Write method: Auto-save triggered for fully invoiced motorcycle sale {record.name}")
+                            record._create_wrc_record_auto()
+                            record.wrc_transferred = True
+                        except Exception as e:
+                            _logger.error(f"Write method: Auto-save failed for {record.name}: {str(e)}")
+                    else:
+                        _logger.info(f"Write method: WRC record already exists for {record.name}: {existing_wrc[0].wrc_no}")
         
         return res
 
@@ -527,10 +643,17 @@ class SaleOrderInherit(models.Model):
         """Auto-create WRC record when sale order is fully invoiced"""
         self.ensure_one()
         
+        # Check if WRC record already exists for this sale order
+        existing_wrc = self.wrc_records.filtered(lambda r: r.state != 'cancelled')
+        if existing_wrc:
+            _logger.info(f"WRC record already exists for SO {self.name}: {existing_wrc[0].wrc_no}")
+            return existing_wrc[0]
+        
         # Auto-populate all fields first
+        # Ensure auto-fill is executed to populate all WRC fields
         self.action_auto_fill_wrc()
         
-        # Prepare WRC data
+        # Prepare comprehensive WRC data - mapping ALL WRC tab fields
         vals = {
             'state': 'draft',  # Always create as draft
             'sale_order_id': self.id,
@@ -561,40 +684,23 @@ class SaleOrderInherit(models.Model):
             'classification': self.wrc_classification,
         }
         
+        # Log the data being saved for debugging
+        _logger.info(f"Auto-saving WRC record for SO {self.name} with data: {vals}")
+        
         wrc_record = self.env['wrc.record'].create(vals)
         
-        # Create PMS-based coupons
-        self._create_pms_coupons(wrc_record)
+        # Mark as transferred and log success
+        self.wrc_transferred = True
+        _logger.info(f"WRC record {wrc_record.wrc_no} auto-created for fully invoiced motorcycle sale {self.name}")
+        
+        # Note: Service coupons will be manually created later
+        # Auto-generation only creates the WRC record with Customer Profile, Dealer Profile, and Unit Information
         
         return wrc_record
 
-    def _create_pms_coupons(self, wrc_record):
-        """Create PMS-based service coupons for the WRC record"""
-        # Get motorcycle product to determine PMS schedule
-        mc_line = self.order_line.filtered(lambda l: self._is_mc_product(l.product_id))
-        if not mc_line:
-            return
-        
-        # Create initial PMS coupons based on classification
-        pms_schedule = []
-        if wrc_record.classification == 'bigbike':
-            # BigBike schedule: 1000km, 3000km, 6000km, 9000km, 12000km
-            pms_schedule = [1000, 3000, 6000, 9000, 12000]
-        else:
-            # Commuter schedule: 1000km, 5000km, 10000km  
-            pms_schedule = [1000, 5000, 10000]
-        
-        # Create service coupons
-        for km in pms_schedule:
-            coupon_vals = {
-                'wrc_record_id': wrc_record.id,
-                'coupon_type': 'pms',
-                'service_type': f'PMS - {km}km',
-                'due_km': km,
-                'is_active': True,
-                'notes': f'Scheduled maintenance at {km} kilometers'
-            }
-            self.env['service.coupon'].create(coupon_vals)
+    def _create_wrc_record(self):
+        """Create WRC record (wrapper for _create_wrc_record_auto)"""
+        return self._create_wrc_record_auto()
 
     # === ACTION METHODS ===
     def action_view_wrc(self):
@@ -619,3 +725,64 @@ class SaleOrderInherit(models.Model):
             'default_wrc_record_id': self.wrc_records[0].id if self.wrc_records else False,
         }
         return action
+
+    def action_create_wrc_record(self):
+        """Manually create WRC record for this motorcycle sale"""
+        self.ensure_one()
+        if not self.is_mc_sale:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': 'This is not a motorcycle sale order',
+                    'type': 'warning',
+                }
+            }
+        
+        # Check if WRC record already exists for this sale order
+        existing_wrc = self.wrc_records.filtered(lambda r: r.state != 'cancelled')
+        if existing_wrc:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'WRC record already exists for this sale order: {existing_wrc[0].wrc_no}',
+                    'type': 'warning',
+                }
+            }
+        
+        if self.wrc_transferred:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': 'WRC record already exists for this sale order',
+                    'type': 'warning',
+                }
+            }
+        
+        # Auto-fill WRC data first
+        self.action_auto_fill_wrc()
+        
+        # Create WRC record
+        wrc_record = self._create_wrc_record()
+        self.wrc_transferred = True
+        
+        if wrc_record:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': f'WRC record {wrc_record.wrc_no} created successfully',
+                    'type': 'success',
+                }
+            }
+        else:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': 'Failed to create WRC record',
+                    'type': 'danger',
+                }
+            }

@@ -10,6 +10,7 @@
                   decoration-muted="state in ['expired', 'disabled']">
                 <field name="coupon_number"/>
                 <field name="wrc_record_id"/>
+                <field name="classification"/>
                 <field name="coupon_type"/>
                 <field name="pms_km_min"/>
                 <field name="pms_km_max"/>

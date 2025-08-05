@@ -12,8 +12,11 @@ class ServiceCoupon(models.Model):
     _order = 'create_date desc'
     
     # Basic Information
-    coupon_number = fields.Char('Coupon Number', required=True, copy=False, readonly=True, default='New')
+    coupon_number = fields.Char('Coupon Number', required=True, copy=False)
     wrc_record_id = fields.Many2one('wrc.record', 'WRC Record', required=True, ondelete='cascade')
+    
+    # Related fields from WRC Record
+    classification = fields.Selection(related='wrc_record_id.classification', string='Classification', readonly=True, store=True)
     
     # Coupon Type and PMS Schedule
     coupon_type = fields.Selection([

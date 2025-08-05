@@ -12,6 +12,7 @@
                 <field name="sale_order_id"/>
                 <field name="model"/>
                 <field name="brand"/>
+                <field name="coupon_number"/>
                 <field name="classification"/>
                 <field name="engine_no"/>
                 <field name="frame_no"/>
@@ -44,6 +45,16 @@
                         </button>
                     </div>
                     
+                    <!-- Honda Coupon Creation Alert -->
+                    <div class="alert alert-info" role="alert" 
+                         attrs="{'invisible': ['|', ('brand', '!=', 'honda'), ('coupon_number', '=', False)]}">
+                        <strong>Honda PMS Service:</strong> Enter coupon number above to enable 3-time PMS service tracking.
+                        <button name="create_honda_service_coupons" type="object" class="btn btn-sm btn-primary ml-2"
+                                attrs="{'invisible': [('coupon_count', '>', 0)]}">
+                            <i class="fa fa-plus"/> Create PMS Coupons
+                        </button>
+                    </div>
+                    
                     <div class="oe_title">
                         <h1>
                             <field name="wrc_no" placeholder="WRC Number"/>
@@ -63,33 +74,40 @@
                     </group>
                     
                     <group>
-                        <group string="Customer Profile (Auto-filled)">
-                            <field name="customer_name"/>
-                            <field name="customer_address"/>
-                            <field name="phone"/>
-                            <field name="email"/>
-                            <field name="birthday"/>
-                            <field name="age"/>
+                        <group string="Customer Profile">
+                            <field name="customer_name" attrs="{'readonly': [('customer_name', '!=', False)]}"/>
+                            <field name="customer_address" attrs="{'readonly': [('customer_address', '!=', False)]}"/>
+                            <field name="phone" attrs="{'readonly': [('phone', '!=', False)]}"/>
+                            <field name="email" attrs="{'readonly': [('email', '!=', False)]}"/>
+                            <field name="birthday" attrs="{'readonly': [('birthday', '!=', False)]}"/>
+                            <field name="age" attrs="{'readonly': True}"/>
                         </group>
-                        <group string="Dealer Profile (Auto-filled)">
-                            <field name="selling_dealer"/>
-                            <field name="dealer_code"/>
-                            <field name="dealer_address"/>
+                        <group string="Dealer Profile">
+                            <field name="selling_dealer" attrs="{'readonly': [('selling_dealer', '!=', False)]}"/>
+                            <field name="dealer_code" attrs="{'readonly': [('dealer_code', '!=', False)]}"/>
+                            <field name="dealer_address" attrs="{'readonly': [('dealer_address', '!=', False)]}"/>
                         </group>
                     </group>
                     
                     <group>
                         <group string="Unit Information">
-                            <field name="model" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
-                            <field name="brand"/>
-                            <field name="classification"/>
-                            <field name="color" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
-                            <field name="qty" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
-                            <field name="payment_basis" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
+                            <field name="state" invisible="1"/>
+                            <field name="model" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('model', '!=', False)]}"/>
+                            <field name="brand" attrs="{'readonly': [('brand', '!=', False)]}"/>
+                            <field name="coupon_number" placeholder="Enter coupon number for Honda PMS tracking"
+                                   attrs="{'invisible': [('brand', '!=', 'honda')]}"/>
+                            <div attrs="{'invisible': [('brand', '!=', 'honda')]}" class="text-muted">
+                                <small><i class="fa fa-info-circle"/> For Honda: One coupon number creates 3 PMS services (PMS-1, PMS-2, PMS-3)</small>
+                            </div>
+                            <field name="classification" widget="selection" attrs="{'readonly': [('classification', '!=', False)]}"/>
+                            <field name="color" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('color', '!=', False)]}"/>
+                            <field name="qty" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('qty', '>', 0)]}"/>
+                            <field name="payment_basis" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('payment_basis', '!=', False)]}"/>
+                            <field name="purchase_date" attrs="{'readonly': [('purchase_date', '!=', False)]}"/>
                         </group>
-                        <group string="Unit Numbers (Editable if incomplete)">
-                            <field name="engine_no" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
-                            <field name="frame_no" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
+                        <group string="Unit Numbers">
+                            <field name="engine_no" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('engine_no', '!=', False)]}"/>
+                            <field name="frame_no" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('frame_no', '!=', False)]}"/>
                         </group>
                     </group>
                     
@@ -108,6 +126,8 @@
                                     <field name="due_date"/>
                                     <field name="state"/>
                                     <field name="is_overdue" invisible="1"/>
+                                    <field name="state"/>
+                                    <field name="is_overdue" invisible="1"/>
                                     <field name="actual_service_date"/>
                                     <field name="mileage"/>
                                     <button name="action_use_coupon" type="object" string="Use" 
@@ -117,6 +137,13 @@
                             </field>
                         </page>
                     </notebook>
+                    
+                    <!-- Invisible fields for attrs conditions -->
+                    <group invisible="1">
+                        <field name="brand"/>
+                        <field name="coupon_number"/>
+                        <field name="coupon_count"/>
+                    </group>
                 </sheet>
             </form>
         </field>
@@ -135,6 +162,7 @@
                 <field name="frame_no"/>
                 <field name="model"/>
                 <field name="brand"/>
+                <field name="coupon_number"/>
                 <field name="classification"/>
                 <separator/>
                 <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
@@ -143,6 +171,9 @@
                 <separator/>
                 <filter name="commuter" string="Commuter" domain="[('classification', '=', 'commuter')]"/>
                 <filter name="bigbike" string="BigBike" domain="[('classification', '=', 'bigbike')]"/>
+                <separator/>
+                <filter name="honda_brand" string="Honda" domain="[('brand', '=', 'honda')]"/>
+                <filter name="has_coupon_number" string="Has Coupon Number" domain="[('coupon_number', '!=', False)]"/>
                 <group expand="0" string="Group By">
                     <filter name="group_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
                     <filter name="group_sale_order" string="Sale Order" context="{'group_by': 'sale_order_id'}"/>
@@ -174,6 +205,5 @@
     </record>
 
     <!-- Menu Items -->
-    <menuitem id="menu_wrc_root" name="WRC Management" sequence="10"/>
     <menuitem id="menu_wrc_records" name="WRC Records" parent="menu_wrc_root" action="action_wrc_record" sequence="10"/>
 </odoo>

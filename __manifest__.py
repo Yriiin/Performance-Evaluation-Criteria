@@ -34,7 +34,9 @@
         'security/ir.model.access.csv',
         'data/sequence_data.xml',
         'data/cron_data.xml',
-        'views/sale_order_view.xml',
+        'views/motorcycle_sales_views.xml',
+        'views/sale_order_view.xml',  # Enabled - WRC tab for motorcycle sales only
+        'views/sale_order_header_view.xml',  # Enabled - WRC action buttons
         'views/wrc_record_views.xml',
         'views/service_coupon_views.xml',
     ],
