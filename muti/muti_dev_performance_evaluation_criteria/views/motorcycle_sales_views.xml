@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Motorcycle Sales List View - Isolated for WRC Management Only -->
+    <record id="view_motorcycle_sales_tree" model="ir.ui.view">
+        <field name="name">motorcycle.sales.tree.wrc</field>
+        <field name="model">sale.order</field>
+        <field name="priority">1000</field>  <!-- High priority to ensure isolation -->
+        <field name="arch" type="xml">
+            <tree string="Motorcycle Sales" create="false" delete="false">
+                <field name="name" string="Sales Order Number"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="wrc_model" string="Model"/>
+                <field name="wrc_brand" string="Brand"/>
+                <field name="wrc_coupon_number" string="Coupon Number"/>
+                <field name="wrc_classification" string="Classification"/>
+                <field name="wrc_engine" string="Engine No."/>
+                <field name="wrc_frame" string="Frame No."/>
+                <field name="wrc_purchase_date" string="Date Purchased"/>
+                <field name="wrc_transferred" string="WRC Registered"/>
+                <field name="state" invisible="1"/>
+                <field name="awb_sale_type" invisible="1"/>
+                <field name="invoice_status" invisible="1"/>
+                <field name="is_mc_sale" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Motorcycle Sales Form View - Completely Standalone WRC Registration Form -->
+    <record id="view_motorcycle_sales_form_standalone" model="ir.ui.view">
+        <field name="name">motorcycle.sales.form.standalone</field>
+        <field name="model">sale.order</field>
+        <field name="priority">1000</field>  <!-- High priority to ensure this view is used only for this action -->
+        <field name="arch" type="xml">
+            <form string="Motorcycle Sales - WRC Registration" create="false" delete="false">
+                <header>
+                    <button name="action_auto_fill_wrc" type="object" string="Auto-Fill WRC" 
+                            class="btn-primary"/>
+                    <button name="action_create_wrc_record" type="object" string="Register WRC" 
+                            class="btn-secondary" 
+                            attrs="{'invisible': [('wrc_transferred', '=', True)]}"/>
+                </header>
+                <sheet>
+                    <!-- Sale Order Info (Hidden but accessible) -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                        <field name="partner_id" readonly="1"/>
+                    </div>
+                    
+                    <!-- WRC Status Alert -->
+                    <div class="alert alert-success" role="alert" 
+                         attrs="{'invisible': [('wrc_transferred', '=', False)]}">
+                        <strong>WRC Record Created:</strong> This motorcycle sale already has a WRC record.
+                    </div>
+                    
+                    <!-- Auto-fill status and controls -->
+                    <div class="alert alert-info" role="alert" 
+                         attrs="{'invisible': [('wrc_data_available', '=', False)]}">
+                        <strong>Auto-Fill Status:</strong> Delivery data is available for WRC auto-fill.
+                        <button name="action_auto_fill_wrc" type="object" class="btn btn-sm btn-primary ml-2">
+                            <i class="fa fa-refresh"/> Refresh Data
+                        </button>
+                    </div>
+                    
+                    <group>
+                        <!-- Customer Profile -->
+                        <group string="Customer Profile">
+                            <field name="wrc_customer_name" string="Name"/>
+                            <field name="wrc_address" string="Address"/>
+                            <field name="wrc_phone" string="Phone Number"/>
+                            <field name="wrc_email" string="Email"/>
+                            <field name="wrc_birthday" string="Birthday"/>
+                        </group>
+                        
+                        <!-- Dealer Profile -->
+                        <group string="Dealer Profile">
+                            <field name="wrc_selling_dealer" string="Selling Dealer"/>
+                            <field name="wrc_dealer_code" string="Dealer Code"/>
+                            <field name="wrc_dealer_address" string="Dealer Address"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <!-- Unit Info -->
+                        <group string="Unit Info">
+                            <field name="wrc_model" string="Model"/>
+                            <field name="wrc_engine" string="Engine No."/>
+                            <field name="wrc_frame" string="Frame No."/>
+                            <field name="wrc_purchase_date" string="Date Purchased"/>
+                            <field name="wrc_color" string="Color"/>
+                            <field name="wrc_brand" string="Brand"/>
+                            <field name="wrc_payment_basis" string="Payment Basis" widget="selection"/>
+                            <field name="wrc_qty" string="QTY"/>
+                            <field name="wrc_classification" string="Classification Selection" widget="selection"/>
+                        </group>
+                        
+                        <!-- Coupon -->
+                        <group string="Coupon">
+                            <field name="wrc_coupon_number" string="Coupon Number"/>
+                        </group>
+                    </group>
+
+                    <!-- Essential Control Fields (Hidden) -->
+                    <group invisible="1">
+                        <field name="wrc_auto_filled"/>
+                        <field name="wrc_data_available"/>
+                        <field name="wrc_transferred"/>
+                        <field name="is_mc_sale"/>
+                        <field name="awb_sale_type"/>
+                        <field name="invoice_status"/>
+                        <field name="state"/>
+                        <field name="show_wrc"/>
+                        <field name="date_order"/>
+                        <field name="user_id"/>
+                        <field name="company_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Motorcycle Sales Search View - Isolated -->
+    <record id="view_motorcycle_sales_search" model="ir.ui.view">
+        <field name="name">motorcycle.sales.search.wrc</field>
+        <field name="model">sale.order</field>
+        <field name="priority">1000</field>  <!-- High priority for isolation -->
+        <field name="arch" type="xml">
+            <search string="Motorcycle Sales - WRC Management">
+                <field name="name" string="Order Reference"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="wrc_model" string="Model"/>
+                <field name="wrc_brand" string="Brand"/>
+                <field name="wrc_classification" string="Classification"/>
+                <field name="wrc_coupon_number" string="Coupon Number"/>
+                <field name="wrc_engine" string="Engine No."/>
+                <field name="wrc_frame" string="Frame No."/>
+                <field name="wrc_purchase_date" string="Date Purchased"/>
+                
+                <filter name="my_orders" string="My Orders"
+                        domain="[('user_id', '=', uid)]"/>
+                <filter name="sale_type_motorcycle" string="Motorcycle Only"
+                        domain="[('awb_sale_type', '=', 'mc')]"/>
+                
+                <separator/>
+                <filter name="fully_invoiced" string="Fully Invoiced"
+                        domain="[('invoice_status', '=', 'invoiced')]"/>
+                <filter name="to_invoice" string="To Invoice"
+                        domain="[('invoice_status', '=', 'to invoice')]"/>
+                <filter name="nothing_to_invoice" string="Nothing to Invoice"
+                        domain="[('invoice_status', '=', 'no')]"/>
+                <filter name="wrc_registered" string="WRC Registered"
+                        domain="[('wrc_transferred', '=', True)]"/>
+                <filter name="wrc_unregistered" string="WRC Unregistered"
+                        domain="[('wrc_transferred', '=', False)]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter name="group_by_brand" string="Brand" domain="[]" context="{'group_by': 'wrc_brand'}"/>
+                    <filter name="group_by_classification" string="Classification" domain="[]" context="{'group_by': 'wrc_classification'}"/>
+                    <filter name="group_by_payment_basis" string="Payment Basis" domain="[]" context="{'group_by': 'wrc_payment_basis'}"/>
+                    <filter name="group_by_invoice_status" string="Invoice Status" domain="[]" context="{'group_by': 'invoice_status'}"/>
+                    <filter name="group_by_wrc_status" string="WRC Status" domain="[]" context="{'group_by': 'wrc_transferred'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Motorcycle Sales Action - Completely Isolated -->
+    <record id="action_motorcycle_sales" model="ir.actions.act_window">
+        <field name="name">Motorcycle Sales</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('awb_sale_type', '=', 'mc')]</field>
+        <field name="context">{
+            'search_default_sale_type_motorcycle': 1,
+            'default_awb_sale_type': 'mc',
+            'create': False,
+            'delete': False,
+        }</field>
+        <field name="search_view_id" ref="view_motorcycle_sales_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+                                      (0, 0, {'view_mode': 'tree', 'view_id': ref('view_motorcycle_sales_tree')}),
+                                      (0, 0, {'view_mode': 'form', 'view_id': ref('view_motorcycle_sales_form_standalone')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No motorcycle sales found!
+            </p>
+            <p>
+                This view shows motorcycle sales orders for WRC management.
+                Only sales orders with sale type "Motorcycle" are displayed here.
+                <br/><br/>
+                <strong>Note:</strong> This is a specialized view for WRC registration and does not affect standard sales operations.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_motorcycle_sales" 
+              name="Motorcycle Sales" 
+              parent="menu_wrc_root"
+              action="action_motorcycle_sales" 
+              sequence="15"/>
+
+</odoo>

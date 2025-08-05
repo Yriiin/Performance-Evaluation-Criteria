@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- WRC Record Sequence (Generic) -->
+        <record id="seq_wrc_record" model="ir.sequence">
+            <field name="name">WRC Record</field>
+            <field name="code">wrc.record</field>
+            <field name="prefix">WRC</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- Brand-specific WRC Sequences -->
+        <!-- Honda WRC Sequence -->
+        <record id="seq_wrc_honda" model="ir.sequence">
+            <field name="name">Honda WRC Record</field>
+            <field name="code">wrc.record.honda</field>
+            <field name="prefix">HOWRC</field>
+            <field name="padding">3</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- Yamaha WRC Sequence -->
+        <record id="seq_wrc_yamaha" model="ir.sequence">
+            <field name="name">Yamaha WRC Record</field>
+            <field name="code">wrc.record.yamaha</field>
+            <field name="prefix">YAWRC</field>
+            <field name="padding">3</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- Kawasaki WRC Sequence -->
+        <record id="seq_wrc_kawasaki" model="ir.sequence">
+            <field name="name">Kawasaki WRC Record</field>
+            <field name="code">wrc.record.kawasaki</field>
+            <field name="prefix">KAWRC</field>
+            <field name="padding">3</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- Suzuki WRC Sequence -->
+        <record id="seq_wrc_suzuki" model="ir.sequence">
+            <field name="name">Suzuki WRC Record</field>
+            <field name="code">wrc.record.suzuki</field>
+            <field name="prefix">SUWRC</field>
+            <field name="padding">3</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- Skygo WRC Sequence -->
+        <record id="seq_wrc_skygo" model="ir.sequence">
+            <field name="name">Skygo WRC Record</field>
+            <field name="code">wrc.record.skygo</field>
+            <field name="prefix">SKWRC</field>
+            <field name="padding">3</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- Service Coupon Sequence -->
+        <record id="seq_service_coupon" model="ir.sequence">
+            <field name="name">Service Coupon</field>
+            <field name="code">service.coupon</field>
+            <field name="prefix">PMS</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        
+        <!-- WRC Service Coupon Sequence (legacy support) -->
+        <record id="seq_wrc_service_coupon" model="ir.sequence">
+            <field name="name">WRC Service Coupon</field>
+            <field name="code">wrc.service.coupon</field>
+            <field name="prefix">WSC</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>
