@@ -187,7 +187,6 @@ class SaleOrderInherit(models.Model):
             # 1. Grab MODEL from sale.order.line.product_id.name (extract text outside brackets and parentheses)
             if mc_product and mc_product.name:
                 # Extract model name by removing text inside brackets [] and parentheses ()
-                import re
                 model_name = mc_product.name
                 # Remove text inside brackets [...]
                 model_name = re.sub(r'\[.*?\]', '', model_name)
@@ -360,7 +359,6 @@ class SaleOrderInherit(models.Model):
                     mc_product = mc_line[0].product_id
                     if not self.wrc_model:
                         # Extract model name by removing text inside brackets [] and parentheses ()
-                        import re
                         model_name = mc_product.name
                         # Remove text inside brackets [...]
                         model_name = re.sub(r'\[.*?\]', '', model_name)

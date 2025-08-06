@@ -7,7 +7,7 @@
 
     'description': """
         Complete WRC (Warranty Record Card) functionality for Motorcycle Sales:
-        
+
         Key Features:
         - Auto-save WRC records when motorcycle sales are fully invoiced
         - Auto-filled fields are read-only, incomplete fields remain editable
@@ -15,7 +15,7 @@
         - Brand extraction from product names (HO=Honda, YA=Yamaha, etc.)
         - Automated PMS-based service coupon generation:
           * Coupon 1: 500-2,000 km or 3 months
-          * Coupon 2: 2,001-6,000 km or 7 months  
+          * Coupon 2: 2,001-6,000 km or 7 months
           * Coupon 3: 6,001-12,000 km or 12 months
         - Coupon use functionality with service tracking
         - Overdue coupon management and validation
