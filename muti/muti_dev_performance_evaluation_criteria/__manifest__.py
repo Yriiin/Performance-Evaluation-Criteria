@@ -6,7 +6,7 @@
         WRC (Warranty Record Card) functionality for Motorcycle Sales""",
 
     'description': """
-        Complete WRC (Warranty Record Card) functionality for Motorcycle Sales:
+        V1.0 Draft - Complete WRC (Warranty Record Card) functionality for Motorcycle Sales:
 
         Key Features:
         - Auto-save WRC records when motorcycle sales are fully invoiced
@@ -26,7 +26,7 @@
     'website': "https://www.muti.com",
 
     'category': 'Sales',
-    'version': '14.0.3.0.0',  # Major version bump for complete redesign
+    'version': '1.0.0',  # V1.0 Draft - Complete motorcycle sales WRC system
 
     'depends': ['base', 'sale'],
 
