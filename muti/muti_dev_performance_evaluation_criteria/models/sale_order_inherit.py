@@ -421,38 +421,6 @@ class SaleOrderInherit(models.Model):
                 }
             }
 
-    def action_test_quantity(self):
-        """Test method to manually set quantity from order line"""
-        self.ensure_one()
-        mc_line = self.order_line.filtered(lambda l: self._is_mc_product(l.product_id))
-        if mc_line:
-            self.wrc_qty = mc_line[0].product_uom_qty
-            _logger.info(f"Test: Set WRC quantity to {self.wrc_qty} from order line quantity {mc_line[0].product_uom_qty}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': f'Quantity set to {self.wrc_qty}',
-                    'type': 'success',
-                }
-            }
-        else:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': 'No motorcycle product found',
-                    'type': 'warning',
-                }
-            }
-
-    def action_refresh_wrc_data(self):
-        """Refresh WRC data - called when WRC tab is opened"""
-        self.ensure_one()
-        if self.is_mc_sale and not self.wrc_auto_filled:
-            self.action_auto_fill_wrc()
-        return True
-
     @api.depends('wrc_records')
     def _compute_has_wrc(self):
         for record in self:
