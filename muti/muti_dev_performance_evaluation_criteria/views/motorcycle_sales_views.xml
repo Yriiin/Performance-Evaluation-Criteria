@@ -11,7 +11,6 @@
                 <field name="partner_id" string="Customer"/>
                 <field name="wrc_model" string="Model"/>
                 <field name="wrc_brand" string="Brand"/>
-                <field name="wrc_coupon_number" string="Coupon Number"/>
                 <field name="wrc_classification" string="Classification"/>
                 <field name="wrc_engine" string="Engine No."/>
                 <field name="wrc_frame" string="Frame No."/>
@@ -94,11 +93,20 @@
                             <field name="wrc_qty" string="QTY"/>
                             <field name="wrc_classification" string="Classification Selection" widget="selection"/>
                         </group>
-                        
-                        <!-- Coupon -->
-                        <group string="Coupon">
-                            <field name="wrc_coupon_number" string="Coupon Number"/>
-                        </group>
+                    </group>
+                    
+                    <!-- Coupon Registration Lines -->
+                    <group string="Coupon Registration">
+                        <field name="wrc_coupon_line_ids" nolabel="1" style="width: 100%;">
+                            <tree editable="bottom" style="min-height: 200px;">
+                                <field name="coupon_number" string="Coupon Number"/>
+                                <field name="coupon_type" string="Coupon Type"/>
+                                <field name="pms_km_min" string="Min KM"/>
+                                <field name="pms_km_max" string="Max KM"/>
+                                <field name="pms_months" string="Months"/>
+                                <field name="notes" string="Notes"/>
+                            </tree>
+                        </field>
                     </group>
 
                     <!-- Essential Control Fields (Hidden) -->
@@ -132,7 +140,6 @@
                 <field name="wrc_model" string="Model"/>
                 <field name="wrc_brand" string="Brand"/>
                 <field name="wrc_classification" string="Classification"/>
-                <field name="wrc_coupon_number" string="Coupon Number"/>
                 <field name="wrc_engine" string="Engine No."/>
                 <field name="wrc_frame" string="Frame No."/>
                 <field name="wrc_purchase_date" string="Date Purchased"/>

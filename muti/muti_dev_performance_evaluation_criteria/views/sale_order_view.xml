@@ -86,15 +86,14 @@
 
                     <!-- Coupon Registration Lines -->
                     <group string="Coupon Registration">
-                        <field name="wrc_coupon_number" string="Base Coupon Number"/>
-                        <field name="wrc_coupon_line_ids" nolabel="1">
-                            <tree editable="bottom">
-                                <field name="coupon_number"/>
-                                <field name="coupon_type"/>
-                                <field name="pms_km_min"/>
-                                <field name="pms_km_max"/>
-                                <field name="pms_months"/>
-                                <field name="notes"/>
+                        <field name="wrc_coupon_line_ids" nolabel="1" style="width: 100%;">
+                            <tree editable="bottom" style="min-height: 200px;">
+                                <field name="coupon_number" string="Coupon Number"/>
+                                <field name="coupon_type" string="Coupon Type"/>
+                                <field name="pms_km_min" string="Min KM"/>
+                                <field name="pms_km_max" string="Max KM"/>
+                                <field name="pms_months" string="Months"/>
+                                <field name="notes" string="Notes"/>
                             </tree>
                         </field>
                     </group>
