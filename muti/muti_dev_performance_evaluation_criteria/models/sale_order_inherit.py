@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+from odoo.exceptions import UserError
 import logging
 import re
 
@@ -8,6 +9,9 @@ class SaleOrderInherit(models.Model):
     _inherit = 'sale.order'
     
     # === WRC FIELDS ===
+    # WRC Information
+    wrc_no = fields.Char('WRC No.', help='Manual WRC Number input')
+    
     # Customer Profile (Auto-filled, Read-only)
     wrc_customer_name = fields.Char('Customer Name', compute='_compute_customer_name', store=True)
     wrc_address = fields.Text('Customer Address')
@@ -45,6 +49,7 @@ class SaleOrderInherit(models.Model):
     
     # Coupon Information
     wrc_coupon_number = fields.Char('Coupon Number', help='User-inputted coupon number for service tracking')
+    wrc_coupon_line_ids = fields.One2many('sale.order.coupon.line', 'order_id', string='Coupon Registration Lines')
     
     # === CONTROL FIELDS ===
     awb_sale_type = fields.Selection([
@@ -124,6 +129,12 @@ class SaleOrderInherit(models.Model):
                     order.wrc_brand = False
             else:
                 order.wrc_brand = False
+
+    @api.onchange('partner_id', 'order_line')
+    def _onchange_auto_fill_wrc(self):
+        """Trigger auto-fill when partner or order lines change"""
+        if self.is_mc_sale and not self.wrc_customer_name:
+            self.action_auto_fill_wrc()
 
     def action_auto_fill_wrc(self):
         """Manual button to auto-fill WRC data from picking/lot info"""
@@ -647,6 +658,7 @@ class SaleOrderInherit(models.Model):
         
         # Prepare comprehensive WRC data - mapping ALL WRC tab fields
         vals = {
+            'wrc_no': self.wrc_no,  # Include manual WRC No.
             'state': 'draft',  # Always create as draft
             'sale_order_id': self.id,
             'partner_id': self.partner_id.id,
@@ -676,6 +688,20 @@ class SaleOrderInherit(models.Model):
             'classification': self.wrc_classification,
             'coupon_number': self.wrc_coupon_number,  # Include coupon number
         }
+        
+        # Add coupon lines if they exist
+        if self.wrc_coupon_line_ids:
+            coupon_lines = []
+            for line in self.wrc_coupon_line_ids:
+                coupon_lines.append((0, 0, {
+                    'coupon_number': line.coupon_number,
+                    'coupon_type': line.coupon_type,
+                    'pms_km_min': line.pms_km_min,
+                    'pms_km_max': line.pms_km_max,
+                    'pms_months': line.pms_months,
+                    'notes': line.notes,
+                }))
+            vals['coupon_line_ids'] = coupon_lines
         
         # Log the data being saved for debugging
         _logger.info(f"Auto-saving WRC record for SO {self.name} with data: {vals}")
@@ -732,6 +758,31 @@ class SaleOrderInherit(models.Model):
                 }
             }
         
+        # Validate required WRC fields before transfer
+        missing_fields = []
+        
+        if not self.wrc_no:
+            missing_fields.append('WRC No.')
+        if not self.wrc_customer_name:
+            missing_fields.append('Customer Name')
+        if not self.wrc_phone:
+            missing_fields.append('Phone Number')
+        if not self.wrc_model:
+            missing_fields.append('Model')
+        if not self.wrc_engine:
+            missing_fields.append('Engine No.')
+        if not self.wrc_frame:
+            missing_fields.append('Frame No.')
+        if not self.wrc_brand:
+            missing_fields.append('Brand')
+        if not self.wrc_classification:
+            missing_fields.append('Classification')
+        if not self.wrc_purchase_date:
+            missing_fields.append('Purchase Date')
+            
+        if missing_fields:
+            raise UserError(f"Please fill in the following required WRC fields before transferring: {', '.join(missing_fields)}")
+        
         # Check if WRC record already exists for this sale order
         existing_wrc = self.wrc_records.filtered(lambda r: r.state != 'cancelled')
         if existing_wrc:
@@ -770,6 +821,40 @@ class SaleOrderInherit(models.Model):
                     'type': 'success',
                 }
             }
+
+
+class SaleOrderCouponLine(models.Model):
+    _name = 'sale.order.coupon.line'
+    _description = 'Sale Order Coupon Registration Line'
+    _rec_name = 'coupon_number'
+    
+    order_id = fields.Many2one('sale.order', 'Sale Order', required=True, ondelete='cascade')
+    coupon_number = fields.Char('Coupon Number', required=True)
+    coupon_type = fields.Selection([
+        ('pms_1', 'PMS 1 (500-2,000 km / 3 months)'),
+        ('pms_2', 'PMS 2 (2,001-6,000 km / 7 months)'),
+        ('pms_3', 'PMS 3 (6,001-12,000 km / 12 months)'),
+    ], string='Coupon Type', required=True)
+    pms_km_min = fields.Integer('Min KM')
+    pms_km_max = fields.Integer('Max KM')
+    pms_months = fields.Integer('Months Schedule')
+    notes = fields.Text('Notes')
+    
+    @api.onchange('coupon_type')
+    def _onchange_coupon_type(self):
+        """Auto-populate KM and months based on coupon type"""
+        if self.coupon_type == 'pms_1':
+            self.pms_km_min = 500
+            self.pms_km_max = 2000
+            self.pms_months = 3
+        elif self.coupon_type == 'pms_2':
+            self.pms_km_min = 2001
+            self.pms_km_max = 6000
+            self.pms_months = 7
+        elif self.coupon_type == 'pms_3':
+            self.pms_km_min = 6001
+            self.pms_km_max = 12000
+            self.pms_months = 12
         else:
             return {
                 'type': 'ir.actions.client',

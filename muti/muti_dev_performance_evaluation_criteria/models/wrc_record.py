@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import models, fields, api
+from odoo.exceptions import UserError
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -11,14 +12,15 @@ class WrcRecord(models.Model):
     _order = 'create_date desc'
     
     # Basic Information
-    wrc_no = fields.Char('WRC No.', required=True, copy=False, readonly=True, default='New')
+    wrc_no = fields.Char('WRC No.', required=True, copy=False)
     state = fields.Selection([
         ('draft', 'Draft'),
         ('confirmed', 'Confirmed'),
         ('cancelled', 'Cancelled')
     ], default='draft', string='Status')
     
-    sale_order_id = fields.Many2one('sale.order', 'Sale Order', required=True, ondelete='cascade')
+    sale_order_id = fields.Many2one('sale.order', 'Sale Order', ondelete='cascade', 
+                                   domain="[('sale_type', '=', 'motorcycle')]")
     partner_id = fields.Many2one('res.partner', 'Customer', required=True)
     branch_id = fields.Many2one('res.company', 'Branch')
     
@@ -61,7 +63,16 @@ class WrcRecord(models.Model):
     
     # Service Coupons
     service_coupon_ids = fields.One2many('service.coupon', 'wrc_record_id', string='Service Coupons')
+    coupon_line_ids = fields.One2many('wrc.record.coupon.line', 'wrc_record_id', string='Coupon Registration Lines')
     coupon_count = fields.Integer('Coupon Count', compute='_compute_coupon_count')
+    
+    # Computed fields for readonly behavior
+    is_confirmed = fields.Boolean('Is Confirmed', compute='_compute_is_confirmed')
+    
+    @api.depends('state')
+    def _compute_is_confirmed(self):
+        for record in self:
+            record.is_confirmed = record.state == 'confirmed'
     
     @api.depends('birthday')
     def _compute_age(self):
@@ -79,9 +90,62 @@ class WrcRecord(models.Model):
         for record in self:
             record.coupon_count = len(record.service_coupon_ids)
     
+    @api.onchange('sale_order_id')
+    def _onchange_sale_order_id(self):
+        """Auto-populate fields from selected sale order"""
+        if self.sale_order_id:
+            so = self.sale_order_id
+            
+            # Auto-populate customer information
+            if so.partner_id:
+                self.partner_id = so.partner_id
+                self.customer_name = so.partner_id.name
+                self.customer_address = so.partner_id.contact_address
+                self.phone = so.partner_id.phone or so.partner_id.mobile
+                self.email = so.partner_id.email
+            
+            # Auto-populate from WRC fields in sale order
+            if hasattr(so, 'wrc_no') and so.wrc_no:
+                self.wrc_no = so.wrc_no
+            if hasattr(so, 'wrc_model') and so.wrc_model:
+                self.model = so.wrc_model
+            if hasattr(so, 'wrc_engine') and so.wrc_engine:
+                self.engine_no = so.wrc_engine
+            if hasattr(so, 'wrc_frame') and so.wrc_frame:
+                self.frame_no = so.wrc_frame
+            if hasattr(so, 'wrc_purchase_date') and so.wrc_purchase_date:
+                self.purchase_date = so.wrc_purchase_date
+            if hasattr(so, 'wrc_color') and so.wrc_color:
+                self.color = so.wrc_color
+            if hasattr(so, 'wrc_brand') and so.wrc_brand:
+                self.brand = so.wrc_brand
+            if hasattr(so, 'wrc_classification') and so.wrc_classification:
+                self.classification = so.wrc_classification
+            if hasattr(so, 'wrc_payment_basis') and so.wrc_payment_basis:
+                self.payment_basis = so.wrc_payment_basis
+            if hasattr(so, 'wrc_qty') and so.wrc_qty:
+                self.qty = so.wrc_qty
+            if hasattr(so, 'wrc_coupon_number') and so.wrc_coupon_number:
+                self.coupon_number = so.wrc_coupon_number
+                
+            # Auto-populate coupon lines from sale order
+            if hasattr(so, 'wrc_coupon_line_ids') and so.wrc_coupon_line_ids:
+                coupon_lines = []
+                for line in so.wrc_coupon_line_ids:
+                    coupon_lines.append((0, 0, {
+                        'coupon_number': line.coupon_number,
+                        'coupon_type': line.coupon_type,
+                        'pms_km_min': line.pms_km_min,
+                        'pms_km_max': line.pms_km_max,
+                        'pms_months': line.pms_months,
+                        'notes': line.notes,
+                    }))
+                self.coupon_line_ids = coupon_lines
+    
     @api.model
     def create(self, vals):
-        if vals.get('wrc_no', 'New') == 'New':
+        # Only auto-generate WRC number if not provided
+        if not vals.get('wrc_no'):
             # Get brand from the values or from sale order
             brand = vals.get('brand')
             
@@ -108,7 +172,35 @@ class WrcRecord(models.Model):
         return super().create(vals)
 
     def action_confirm(self):
-        """Confirm WRC record"""
+        """Confirm WRC record - validate all required fields are filled"""
+        self.ensure_one()
+        
+        # Validate required fields
+        missing_fields = []
+        
+        # Check customer information
+        if not self.customer_name:
+            missing_fields.append('Customer Name')
+        if not self.phone:
+            missing_fields.append('Phone Number')
+            
+        # Check unit information
+        if not self.model:
+            missing_fields.append('Model')
+        if not self.engine_no:
+            missing_fields.append('Engine No.')
+        if not self.frame_no:
+            missing_fields.append('Frame No.')
+        if not self.brand:
+            missing_fields.append('Brand')
+        if not self.classification:
+            missing_fields.append('Classification')
+        if not self.purchase_date:
+            missing_fields.append('Purchase Date')
+            
+        if missing_fields:
+            raise UserError(f"Please fill in the following required fields before confirming: {', '.join(missing_fields)}")
+        
         self.write({'state': 'confirmed'})
 
     def action_cancel(self):
@@ -192,3 +284,37 @@ class WrcRecord(models.Model):
             self.create_honda_service_coupons()
             
         return res
+
+
+class WrcRecordCouponLine(models.Model):
+    _name = 'wrc.record.coupon.line'
+    _description = 'WRC Record Coupon Registration Line'
+    _rec_name = 'coupon_number'
+    
+    wrc_record_id = fields.Many2one('wrc.record', 'WRC Record', required=True, ondelete='cascade')
+    coupon_number = fields.Char('Coupon Number', required=True)
+    coupon_type = fields.Selection([
+        ('pms_1', 'PMS 1 (500-2,000 km / 3 months)'),
+        ('pms_2', 'PMS 2 (2,001-6,000 km / 7 months)'),
+        ('pms_3', 'PMS 3 (6,001-12,000 km / 12 months)'),
+    ], string='Coupon Type', required=True)
+    pms_km_min = fields.Integer('Min KM')
+    pms_km_max = fields.Integer('Max KM')
+    pms_months = fields.Integer('Months Schedule')
+    notes = fields.Text('Notes')
+    
+    @api.onchange('coupon_type')
+    def _onchange_coupon_type(self):
+        """Auto-populate KM and months based on coupon type"""
+        if self.coupon_type == 'pms_1':
+            self.pms_km_min = 500
+            self.pms_km_max = 2000
+            self.pms_months = 3
+        elif self.coupon_type == 'pms_2':
+            self.pms_km_min = 2001
+            self.pms_km_max = 6000
+            self.pms_months = 7
+        elif self.coupon_type == 'pms_3':
+            self.pms_km_min = 6001
+            self.pms_km_max = 12000
+            self.pms_months = 12

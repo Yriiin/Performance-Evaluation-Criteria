@@ -5,3 +5,7 @@ access_service_coupon_user,service.coupon.user,model_service_coupon,sales_team.g
 access_service_coupon_manager,service.coupon.manager,model_service_coupon,sales_team.group_sale_manager,1,1,1,1
 access_service_coupon_use_wizard_user,service.coupon.use.wizard.user,model_service_coupon_use_wizard,sales_team.group_sale_salesman,1,1,1,1
 access_service_coupon_use_wizard_manager,service.coupon.use.wizard.manager,model_service_coupon_use_wizard,sales_team.group_sale_manager,1,1,1,1
+access_sale_order_coupon_line_user,sale.order.coupon.line.user,model_sale_order_coupon_line,sales_team.group_sale_salesman,1,1,1,1
+access_sale_order_coupon_line_manager,sale.order.coupon.line.manager,model_sale_order_coupon_line,sales_team.group_sale_manager,1,1,1,1
+access_wrc_record_coupon_line_user,wrc.record.coupon.line.user,model_wrc_record_coupon_line,sales_team.group_sale_salesman,1,1,1,1
+access_wrc_record_coupon_line_manager,wrc.record.coupon.line.manager,model_wrc_record_coupon_line,sales_team.group_sale_manager,1,1,1,1

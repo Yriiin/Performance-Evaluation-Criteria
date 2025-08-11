@@ -46,6 +46,11 @@
                         <strong>WRC Auto-Created:</strong> A WRC record has been automatically created for this motorcycle sale.
                     </div>
                     
+                    <!-- WRC Number Input -->
+                    <group>
+                        <field name="wrc_no" placeholder="Enter WRC Number"/>
+                    </group>
+                    
                     <group>
                         <!-- Customer Profile (Auto-filled, Read-only) -->
                         <group string="Customer Profile">
@@ -77,11 +82,21 @@
                             <field name="wrc_qty"/>
                             <field name="wrc_classification" widget="selection"/>
                         </group>
-                        
-                        <!-- Coupon Information -->
-                        <group string="Coupon">
-                            <field name="wrc_coupon_number" string="Coupon Number"/>
-                        </group>
+                    </group>
+
+                    <!-- Coupon Registration Lines -->
+                    <group string="Coupon Registration">
+                        <field name="wrc_coupon_number" string="Base Coupon Number"/>
+                        <field name="wrc_coupon_line_ids" nolabel="1">
+                            <tree editable="bottom">
+                                <field name="coupon_number"/>
+                                <field name="coupon_type"/>
+                                <field name="pms_km_min"/>
+                                <field name="pms_km_max"/>
+                                <field name="pms_months"/>
+                                <field name="notes"/>
+                            </tree>
+                        </field>
                     </group>
 
                     <!-- Control Fields -->

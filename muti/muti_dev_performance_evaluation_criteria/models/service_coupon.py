@@ -4,6 +4,9 @@ from odoo import models, fields, api
 from odoo.exceptions import UserError
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class ServiceCoupon(models.Model):
     _name = 'service.coupon'
@@ -30,6 +33,11 @@ class ServiceCoupon(models.Model):
     pms_km_max = fields.Integer('Max KM')
     pms_months = fields.Integer('Months Schedule')
     due_date = fields.Date('Due Date')
+    
+    # Sequential PMS tracking
+    previous_pms_coupon_id = fields.Many2one('service.coupon', 'Previous PMS Coupon')
+    is_pms_1_based = fields.Boolean('PMS 1 Based', default=True, 
+                                   help='True if scheduled based on months, False if based on previous PMS')
     
     # Status
     state = fields.Selection([
@@ -140,6 +148,9 @@ class ServiceCoupon(models.Model):
         
         self.write(vals)
         
+        # Create next PMS coupon if this was PMS 1 or PMS 2
+        self.create_next_pms_coupon(service_data)
+        
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -149,6 +160,63 @@ class ServiceCoupon(models.Model):
                 'type': 'success',
             }
         }
+
+    def create_next_pms_coupon(self, service_data):
+        """Create next PMS coupon based on current PMS completion"""
+        self.ensure_one()
+        
+        # Only create next coupon for PMS 1 and PMS 2
+        if self.coupon_type not in ['pms_1', 'pms_2']:
+            return
+            
+        # Determine next coupon type
+        next_coupon_type = 'pms_2' if self.coupon_type == 'pms_1' else 'pms_3'
+        
+        # Check if next coupon already exists
+        existing_next = self.search([
+            ('wrc_record_id', '=', self.wrc_record_id.id),
+            ('coupon_type', '=', next_coupon_type),
+            ('state', 'in', ['active', 'used'])
+        ])
+        if existing_next:
+            return  # Next coupon already exists
+            
+        # Calculate due date and mileage range based on current service
+        actual_service_date = service_data.get('actual_service_date')
+        current_mileage = service_data.get('mileage', 0)
+        
+        if next_coupon_type == 'pms_2':
+            # PMS 2: Calculate based on PMS 1 completion
+            due_date = actual_service_date + relativedelta(months=4) if actual_service_date else False  # 7-3=4 months from PMS 1
+            pms_km_min = max(2001, current_mileage)
+            pms_km_max = current_mileage + 4000  # Approximate 4000km range
+            pms_months = 7
+        else:  # PMS 3
+            # PMS 3: Calculate based on PMS 2 completion  
+            due_date = actual_service_date + relativedelta(months=5) if actual_service_date else False  # 12-7=5 months from PMS 2
+            pms_km_min = max(6001, current_mileage)
+            pms_km_max = current_mileage + 6000  # Approximate 6000km range
+            pms_months = 12
+            
+        # Generate next coupon number
+        base_coupon_number = self.coupon_number.replace('-PMS_1', '').replace('-PMS_2', '').replace('-PMS_3', '')
+        next_coupon_number = f"{base_coupon_number}-{next_coupon_type.upper()}"
+        
+        # Create next PMS coupon
+        self.env['service.coupon'].create({
+            'coupon_number': next_coupon_number,
+            'wrc_record_id': self.wrc_record_id.id,
+            'coupon_type': next_coupon_type,
+            'pms_km_min': pms_km_min,
+            'pms_km_max': pms_km_max,
+            'pms_months': pms_months,
+            'due_date': due_date,
+            'previous_pms_coupon_id': self.id,
+            'is_pms_1_based': False,
+            'state': 'active',
+        })
+        
+        _logger.info(f"Created next PMS coupon {next_coupon_number} based on {self.coupon_number} completion")
 
     def action_reset_to_active(self):
         """Reset coupon to active state"""
@@ -166,10 +234,15 @@ class ServiceCoupon(models.Model):
 
     @api.model
     def check_expired_coupons(self):
-        """Cron job to mark overdue coupons as expired"""
+        """Cron job to auto-disable overdue coupons"""
         today = fields.Date.today()
         overdue_coupons = self.search([
             ('state', '=', 'active'),
             ('due_date', '<', today)
         ])
-        overdue_coupons.write({'state': 'expired'})
+        # Auto-disable expired coupons
+        overdue_coupons.write({'state': 'disabled'})
+        
+        # Log the auto-disabled coupons
+        if overdue_coupons:
+            _logger.info(f"Auto-disabled {len(overdue_coupons)} expired coupons")
