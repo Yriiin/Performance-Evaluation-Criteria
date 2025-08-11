@@ -85,11 +85,11 @@
                     </group>
 
                     <!-- Coupon Registration Lines -->
-                    <group string="Coupon Registration">
-                        <field name="wrc_coupon_line_ids" nolabel="1" style="width: 100%;">
-                            <tree editable="bottom" style="min-height: 200px;">
-                                <field name="coupon_number" string="Coupon Number"/>
-                                <field name="coupon_type" string="Coupon Type"/>
+                    <group string="Coupon Registration" col="1">
+                        <field name="wrc_coupon_line_ids" nolabel="1" widget="one2many">
+                            <tree editable="bottom" create="true" delete="true" class="o_list_view_table_full_width">
+                                <field name="coupon_number" string="Coupon Number" required="1"/>
+                                <field name="coupon_type" string="Type" required="1"/>
                                 <field name="pms_km_min" string="Min KM"/>
                                 <field name="pms_km_max" string="Max KM"/>
                                 <field name="pms_months" string="Months"/>

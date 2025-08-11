@@ -3,6 +3,22 @@
     <!-- Root Menu for WRC Management -->
     <menuitem id="menu_wrc_root" name="WRC Management" sequence="10"/>
     
+    <!-- WRC Coupon Line Tree View for better display -->
+    <record id="view_wrc_coupon_line_tree" model="ir.ui.view">
+        <field name="name">wrc.record.coupon.line.tree</field>
+        <field name="model">wrc.record.coupon.line</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom" create="true" delete="true" class="o_list_view_table_full_width">
+                <field name="coupon_number" string="Coupon Number" required="1"/>
+                <field name="coupon_type" string="Type" required="1"/>
+                <field name="pms_km_min" string="Min KM"/>
+                <field name="pms_km_max" string="Max KM"/>
+                <field name="pms_months" string="Months"/>
+                <field name="notes" string="Notes"/>
+            </tree>
+        </field>
+    </record>
+    
     <!-- WRC Record Tree View -->
     <record id="view_wrc_record_tree" model="ir.ui.view">
         <field name="name">wrc.record.tree</field>
@@ -116,20 +132,21 @@
                     </group>
                     
                     <!-- Coupon Registration Lines -->
-                    <group string="Coupon Registration">
+                    <group string="Coupon Registration" col="1">
                         <field name="coupon_number" placeholder="Enter base coupon number for Honda PMS tracking"
                                attrs="{'invisible': [('brand', '!=', 'honda')], 'readonly': [('state', '=', 'confirmed')]}"/>
                         <div attrs="{'invisible': [('brand', '!=', 'honda')]}" class="text-muted">
                             <small><i class="fa fa-info-circle"/> For Honda: One coupon number creates 3 PMS services (PMS-1, PMS-2, PMS-3)</small>
                         </div>
-                        <field name="coupon_line_ids" nolabel="1" attrs="{'readonly': [('state', '=', 'confirmed')]}" style="width: 100%;">
-                            <tree editable="bottom" style="min-height: 250px;">
-                                <field name="coupon_number" string="Coupon Number"/>
-                                <field name="coupon_type" string="Coupon Type"/>
-                                <field name="pms_km_min" string="Min KM"/>
-                                <field name="pms_km_max" string="Max KM"/>
-                                <field name="pms_months" string="Months"/>
-                                <field name="notes" string="Notes"/>
+                        <field name="coupon_line_ids" nolabel="1" attrs="{'readonly': [('state', '=', 'confirmed')]}" 
+                               widget="one2many" context="{'tree_view_ref': 'muti_dev_performance_evaluation_criteria.view_wrc_coupon_line_tree'}">
+                            <tree editable="bottom" create="true" delete="true" decoration-info="True">
+                                <field name="coupon_number" string="Coupon Number" width="150px"/>
+                                <field name="coupon_type" string="Type" width="120px"/>
+                                <field name="pms_km_min" string="Min KM" width="100px"/>
+                                <field name="pms_km_max" string="Max KM" width="100px"/>
+                                <field name="pms_months" string="Months" width="80px"/>
+                                <field name="notes" string="Notes" width="200px"/>
                             </tree>
                         </field>
                     </group>
