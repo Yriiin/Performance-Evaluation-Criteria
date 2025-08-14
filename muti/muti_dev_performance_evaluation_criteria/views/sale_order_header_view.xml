@@ -1,21 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- WRC Header Buttons - Only for confirmed motorcycle sales -->
+    <!-- WRC Header View - Hidden redundant buttons, keeping only necessary fields -->
     <record id="view_sale_order_wrc_header" model="ir.ui.view">
         <field name="name">sale.order.wrc.header</field>
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
-            <!-- Add WRC header buttons only for confirmed motorcycle sales -->
-            <header position="inside">
-                <button name="action_auto_fill_wrc" type="object" string="Auto-Fill WRC" 
-                        class="btn-primary" 
-                        attrs="{'invisible': [('show_wrc', '=', False)]}"/>
-                <button name="action_create_wrc_record" type="object" string="Create WRC" 
-                        class="btn-secondary" 
-                        attrs="{'invisible': ['|', ('show_wrc', '=', False), ('wrc_transferred', '=', True)]}"/>
-            </header>
-            
             <!-- Add required fields for attrs conditions -->
             <field name="state" position="after">
                 <field name="awb_sale_type" invisible="1"/>

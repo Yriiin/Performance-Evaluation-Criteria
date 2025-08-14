@@ -15,7 +15,7 @@
                 <field name="wrc_engine" string="Engine No."/>
                 <field name="wrc_frame" string="Frame No."/>
                 <field name="wrc_purchase_date" string="Date Purchased"/>
-                <field name="wrc_transferred" string="WRC Registered"/>
+                <field name="wrc_transferred" string="WRC Status"/>
                 <field name="state" invisible="1"/>
                 <field name="awb_sale_type" invisible="1"/>
                 <field name="invoice_status" invisible="1"/>
@@ -47,29 +47,44 @@
                         <field name="partner_id" readonly="1"/>
                     </div>
                     
-                    <!-- WRC Status Alert -->
-                    <div class="alert alert-success" role="alert" 
+                    <!-- WRC Creation Success Banner -->
+                    <div class="alert alert-success" role="alert" style="border-left: 4px solid #28a745;"
                          attrs="{'invisible': [('wrc_transferred', '=', False)]}">
-                        <strong>WRC Record Created:</strong> This motorcycle sale already has a WRC record.
+                        <strong><i class="fa fa-check-circle text-success"/> WRC Record Created Successfully!</strong>
+                        <p class="mb-1">WRC registration has been completed for this motorcycle sale.</p>
+                        <button name="action_view_wrc" type="object" class="btn btn-sm btn-outline-success">
+                            <i class="fa fa-external-link"/> View WRC Record
+                        </button>
+                        <button name="action_view_coupons" type="object" class="btn btn-sm btn-outline-info ml-2"
+                                attrs="{'invisible': [('coupon_count', '=', 0)]}">
+                            <i class="fa fa-ticket"/> View Service Coupons (<field name="coupon_count"/>)
+                        </button>
                     </div>
                     
                     <!-- Auto-fill status and controls -->
                     <div class="alert alert-info" role="alert" 
-                         attrs="{'invisible': [('wrc_data_available', '=', False)]}">
+                         attrs="{'invisible': ['|', ('wrc_data_available', '=', False), ('wrc_transferred', '=', True)]}">
                         <strong>Auto-Fill Status:</strong> Delivery data is available for WRC auto-fill.
                         <button name="action_auto_fill_wrc" type="object" class="btn btn-sm btn-primary ml-2">
                             <i class="fa fa-refresh"/> Refresh Data
                         </button>
                     </div>
                     
+                    <!-- WRC Number Input -->
+                    <group>
+                        <field name="wrc_no" placeholder="Enter WRC Number" 
+                               on_change="1" context="{'trigger_auto_fill': True}"/>
+                    </group>
+                    
                     <group>
                         <!-- Customer Profile -->
                         <group string="Customer Profile">
-                            <field name="wrc_customer_name" string="Name"/>
+                            <field name="wrc_customer_name" string="Name" on_change="1" context="{'trigger_auto_fill': True}"/>
                             <field name="wrc_address" string="Address"/>
                             <field name="wrc_phone" string="Phone Number"/>
                             <field name="wrc_email" string="Email"/>
                             <field name="wrc_birthday" string="Birthday"/>
+                            <field name="wrc_age" string="Age" readonly="1"/>
                         </group>
                         
                         <!-- Dealer Profile -->
@@ -82,7 +97,7 @@
 
                     <group>
                         <!-- Unit Info -->
-                        <group string="Unit Info">
+                        <group string="Unit Information">
                             <field name="wrc_model" string="Model"/>
                             <field name="wrc_engine" string="Engine No."/>
                             <field name="wrc_frame" string="Frame No."/>

@@ -79,10 +79,12 @@ class WrcRecord(models.Model):
     
     @api.depends('birthday')
     def _compute_age(self):
+        today = datetime.today().date()
         for record in self:
             if record.birthday:
-                today = fields.Date.today()
-                record.age = today.year - record.birthday.year - ((today.month, today.day) < (record.birthday.month, record.birthday.day))
+                record.age = today.year - record.birthday.year - (
+                    (today.month, today.day) < (record.birthday.month, record.birthday.day)
+                )
             else:
                 record.age = 0
 
@@ -110,45 +112,156 @@ class WrcRecord(models.Model):
     
     @api.onchange('sale_order_id')
     def _onchange_sale_order_id(self):
-        """Simple onchange - just for manual selection if needed"""
-        # This is only for manual editing - the wizard handles creation
-        if self.sale_order_id and not self._context.get('from_wizard'):
-            _logger.info(f"WRC Record: Manual sale order change to {self.sale_order_id.name}")
-            # Only basic customer info for manual changes
-            if self.sale_order_id.partner_id and not self.partner_id:
-                self.partner_id = self.sale_order_id.partner_id
-                self.customer_name = self.sale_order_id.partner_id.name
+        """DISABLED: Auto-populate fields from selected sale order - Use manual refresh button instead"""
+        # COMPLETELY DISABLED to prevent data loss during save operations
+        # Users should use the "Refresh All Fields from Sale Order" button instead
+        _logger.info(f"WRC Record: onchange triggered but disabled - use manual refresh button instead")
+        return
     
     def _manual_auto_fill_from_sale_order(self):
-        """Manual auto-fill method that doesn't trigger onchange issues - ONLY fills empty fields"""
+        """Manual auto-fill method that prioritizes WRC tab fields from sale order"""
         if not self.sale_order_id:
-            _logger.info("WRC Record Auto-fill: No sale order selected, exiting")
             return
             
         so = self.sale_order_id
-        _logger.info(f"WRC Record Manual Auto-fill: Processing sale order {so.name} for record {self.id or 'NEW'}")
+        _logger.info(f"WRC Record Manual Auto-fill: Processing sale order {so.name}")
         
-        # Auto-populate customer information (ONLY if fields are empty)
-        if so.partner_id:
-            # Only set partner_id if not already set
-            if not self.partner_id:
-                self.partner_id = so.partner_id
-                _logger.info(f"WRC Record Auto-fill: Set partner_id to {so.partner_id.name}")
+        # PRIORITY 1: Use WRC Tab fields from Sale Order (these are the main data source)
+        _logger.info(f"WRC Record: Checking WRC tab fields from sale order {so.name}")
+        
+        # Customer Information from WRC Tab
+        if hasattr(so, 'wrc_customer_name') and so.wrc_customer_name and not self.customer_name:
+            self.customer_name = so.wrc_customer_name
+            _logger.info(f"WRC Record: Set customer name from WRC tab: {so.wrc_customer_name}")
+        
+        if hasattr(so, 'wrc_address') and so.wrc_address and not self.customer_address:
+            self.customer_address = so.wrc_address
+            _logger.info(f"WRC Record: Set address from WRC tab")
             
-            # Only set customer_name if empty
-            if not self.customer_name:
-                self.customer_name = so.partner_id.name
-                _logger.info(f"WRC Record Auto-fill: Set customer_name to {so.partner_id.name}")
+        if hasattr(so, 'wrc_phone') and so.wrc_phone and not self.phone:
+            self.phone = so.wrc_phone
+            _logger.info(f"WRC Record: Set phone from WRC tab: {so.wrc_phone}")
             
-            # Build customer address from partner - only if empty
-            if not self.customer_address:
-                address_parts = []
-                if so.partner_id.street:
-                    address_parts.append(so.partner_id.street)
-                if so.partner_id.street2:
-                    address_parts.append(so.partner_id.street2)
-                if so.partner_id.city:
-                    address_parts.append(so.partner_id.city)
+        if hasattr(so, 'wrc_email') and so.wrc_email and not self.email:
+            self.email = so.wrc_email
+            _logger.info(f"WRC Record: Set email from WRC tab: {so.wrc_email}")
+            
+        if hasattr(so, 'wrc_birthday') and so.wrc_birthday and not self.birthday:
+            self.birthday = so.wrc_birthday
+            _logger.info(f"WRC Record: Set birthday from WRC tab: {so.wrc_birthday}")
+        
+        # Unit Information from WRC Tab
+        if hasattr(so, 'wrc_model') and so.wrc_model and not self.model:
+            self.model = so.wrc_model
+            _logger.info(f"WRC Record: Set model from WRC tab: {so.wrc_model}")
+            
+        if hasattr(so, 'wrc_engine') and so.wrc_engine and not self.engine_no:
+            self.engine_no = so.wrc_engine
+            _logger.info(f"WRC Record: Set engine from WRC tab: {so.wrc_engine}")
+            
+        if hasattr(so, 'wrc_frame') and so.wrc_frame and not self.frame_no:
+            self.frame_no = so.wrc_frame
+            _logger.info(f"WRC Record: Set frame from WRC tab: {so.wrc_frame}")
+            
+        if hasattr(so, 'wrc_color') and so.wrc_color and not self.color:
+            self.color = so.wrc_color
+            _logger.info(f"WRC Record: Set color from WRC tab: {so.wrc_color}")
+            
+        if hasattr(so, 'wrc_brand') and so.wrc_brand and not self.brand:
+            self.brand = so.wrc_brand
+            _logger.info(f"WRC Record: Set brand from WRC tab: {so.wrc_brand}")
+            
+        if hasattr(so, 'wrc_classification') and so.wrc_classification and not self.classification:
+            self.classification = so.wrc_classification
+            _logger.info(f"WRC Record: Set classification from WRC tab: {so.wrc_classification}")
+            
+        if hasattr(so, 'wrc_payment_basis') and so.wrc_payment_basis and not self.payment_basis:
+            self.payment_basis = so.wrc_payment_basis
+            _logger.info(f"WRC Record: Set payment basis from WRC tab: {so.wrc_payment_basis}")
+            
+        if hasattr(so, 'wrc_qty') and so.wrc_qty and (not self.qty or self.qty == 1.0):
+            self.qty = so.wrc_qty
+            _logger.info(f"WRC Record: Set quantity from WRC tab: {so.wrc_qty}")
+            
+        if hasattr(so, 'wrc_purchase_date') and so.wrc_purchase_date and not self.purchase_date:
+            self.purchase_date = so.wrc_purchase_date
+            _logger.info(f"WRC Record: Set purchase date from WRC tab: {so.wrc_purchase_date}")
+        
+        # Dealer Information from WRC Tab
+        if hasattr(so, 'wrc_selling_dealer') and so.wrc_selling_dealer and not self.selling_dealer:
+            self.selling_dealer = so.wrc_selling_dealer
+            _logger.info(f"WRC Record: Set selling dealer from WRC tab: {so.wrc_selling_dealer}")
+            
+        if hasattr(so, 'wrc_dealer_code') and so.wrc_dealer_code and not self.dealer_code:
+            self.dealer_code = so.wrc_dealer_code
+            _logger.info(f"WRC Record: Set dealer code from WRC tab: {so.wrc_dealer_code}")
+            
+        if hasattr(so, 'wrc_dealer_address') and so.wrc_dealer_address and not self.dealer_address:
+            self.dealer_address = so.wrc_dealer_address
+            _logger.info(f"WRC Record: Set dealer address from WRC tab")
+        
+        # Set partner_id to match the sale order partner
+        if so.partner_id and not self.partner_id:
+            self.partner_id = so.partner_id
+            _logger.info(f"WRC Record: Set partner from sale order: {so.partner_id.name}")
+        
+        # PRIORITY 2: Fallback to partner data if WRC tab fields are empty
+        if not self.customer_name and so.partner_id:
+            self.customer_name = so.partner_id.name
+            _logger.info(f"WRC Record: Fallback - Set customer name from partner: {so.partner_id.name}")
+            
+        if not self.phone and so.partner_id:
+            self.phone = so.partner_id.phone or so.partner_id.mobile
+            if self.phone:
+                _logger.info(f"WRC Record: Fallback - Set phone from partner: {self.phone}")
+                
+        if not self.email and so.partner_id:
+            self.email = so.partner_id.email
+            if self.email:
+                _logger.info(f"WRC Record: Fallback - Set email from partner: {self.email}")
+        
+        # Set default quantity if still empty
+        if not self.qty or self.qty == 0:
+            self.qty = 1.0
+        
+        # Set purchase date from order date if not set
+        if not self.purchase_date and so.date_order:
+            self.purchase_date = so.date_order.date()
+            _logger.info(f"WRC Record: Set purchase date from order date: {self.purchase_date}")
+        
+        # Log what was populated
+        populated_fields = []
+        if self.customer_name:
+            populated_fields.append('Customer Name')
+        if self.model:
+            populated_fields.append('Model')
+        if self.engine_no:
+            populated_fields.append('Engine No.')
+        if self.frame_no:
+            populated_fields.append('Frame No.')
+        if self.brand:
+            populated_fields.append('Brand')
+        if self.color:
+            populated_fields.append('Color')
+        if self.phone:
+            populated_fields.append('Phone')
+        if self.email:
+            populated_fields.append('Email')
+            
+        _logger.info(f"WRC Record Auto-fill: Populated {len(populated_fields)} fields: {', '.join(populated_fields)}")
+    
+    def _check_required_fields_filled(self):
+        """Check if all required fields are filled for confirmation"""
+        required_fields = [
+            self.customer_name, self.phone, self.model, 
+            self.engine_no, self.frame_no, self.brand, 
+            self.classification, self.purchase_date
+        ]
+        return all(field for field in required_fields)
+
+    def action_confirm(self):
+        """Confirm WRC record - validate all required fields are filled"""
+        self.ensure_one()
                 if so.partner_id.state_id:
                     address_parts.append(so.partner_id.state_id.name)
                 if so.partner_id.zip:
@@ -392,21 +505,6 @@ class WrcRecord(models.Model):
             
             _logger.info(f"WRC Record Auto-fill: Populated {len(populated_fields)} fields: {', '.join(populated_fields)}")
             
-            # Log changes made
-            after_values = {
-                'customer_name': self.customer_name,
-                'model': self.model,
-                'engine_no': self.engine_no,
-                'frame_no': self.frame_no,
-                'brand': self.brand,
-                'phone': self.phone,
-                'email': self.email,
-                'color': self.color
-            }
-            
-            # Logging success
-            _logger.info(f"WRC Record Auto-fill: Successfully updated fields")
-            
             if populated_fields:
                 return {
                     'warning': {
@@ -414,18 +512,71 @@ class WrcRecord(models.Model):
                         'message': f'Successfully populated {len(populated_fields)} fields from sale order data: {", ".join(populated_fields)}'
                     }
                 }
+            
+            # Customer Profile Fields
+            customer_name_val = getattr(so, 'wrc_customer_name', None)
+            if customer_name_val:
+                self.customer_name = customer_name_val
+            elif so.partner_id:
+                self.customer_name = so.partner_id.name
+                
+            address_val = getattr(so, 'wrc_address', None)
+            if address_val:
+                self.customer_address = address_val
+            elif so.partner_id:
+                self.customer_address = so.partner_id.contact_address
+                
+            phone_val = getattr(so, 'wrc_phone', None)
+            if phone_val:
+                self.phone = phone_val
+            elif so.partner_id:
+                self.phone = so.partner_id.phone or so.partner_id.mobile
+                
+            email_val = getattr(so, 'wrc_email', None)
+            if email_val:
+                self.email = email_val
+            elif so.partner_id:
+                self.email = so.partner_id.email
+                
+            birthday_val = getattr(so, 'wrc_birthday', None)
+            if birthday_val:
+                self.birthday = birthday_val
 
-    def _clear_auto_filled_fields(self):
-        """Clear auto-filled fields when no sale order is selected (VERY RESTRICTIVE - only for truly new records)"""
-        # Only clear if this is a completely new record that hasn't been saved yet AND has no meaningful data
-        if (not self.id and 
-            not self.customer_name and 
-            not self.model and 
-            not self.engine_no and 
-            not self.frame_no and
-            not self.phone and
-            not self.email):
-            _logger.info("WRC Record: Clearing auto-filled fields - truly empty new record with no sale order")
+            # Dealer Profile Fields
+            selling_dealer_val = getattr(so, 'wrc_selling_dealer', None)
+            if selling_dealer_val:
+                self.selling_dealer = selling_dealer_val
+                
+            dealer_code_val = getattr(so, 'wrc_dealer_code', None)
+            if dealer_code_val:
+                self.dealer_code = dealer_code_val
+                
+            dealer_address_val = getattr(so, 'wrc_dealer_address', None)
+            if dealer_address_val:
+                self.dealer_address = dealer_address_val
+            
+            # Set branch to sale order company
+            if so.company_id:
+                self.branch_id = so.company_id
+                
+            # Auto-populate coupon lines from sale order
+            coupon_line_ids = getattr(so, 'wrc_coupon_line_ids', False)
+            if coupon_line_ids:
+                coupon_lines = []
+                for line in coupon_line_ids:
+                    coupon_lines.append((0, 0, {
+                        'coupon_number': line.coupon_number,
+                        'coupon_type': line.coupon_type,
+                        'pms_km_min': line.pms_km_min,
+                        'pms_km_max': line.pms_km_max,
+                        'pms_months': line.pms_months,
+                        'notes': line.notes,
+                    }))
+                self.coupon_line_ids = coupon_lines
+                _logger.info(f"WRC Record Auto-fill: Added {len(coupon_line_ids)} coupon lines")
+        else:
+            # Clear fields when no sale order is selected
+            _logger.info("WRC Record Auto-fill: Clearing fields - no sale order selected")
             self.partner_id = False
             self.customer_name = ''
             self.customer_address = ''
@@ -447,8 +598,189 @@ class WrcRecord(models.Model):
             self.coupon_number = ''
             self.branch_id = False
             self.coupon_line_ids = [(5, 0, 0)]  # Clear all coupon lines
-        else:
-            _logger.info(f"WRC Record: NOT clearing fields - record has data (id: {self.id}, has_customer: {bool(self.customer_name)}, has_model: {bool(self.model)})")
+    
+    def _manual_auto_fill_from_sale_order(self):
+        """Manual auto-fill method that doesn't trigger onchange issues"""
+        if not self.sale_order_id:
+            return
+            
+        so = self.sale_order_id
+        _logger.info(f"WRC Record Manual Auto-fill: Processing sale order {so.name}")
+        
+        # Auto-populate customer information (always overwrite for manual action)
+        if so.partner_id:
+            self.partner_id = so.partner_id
+            self.customer_name = so.partner_id.name
+            
+            # Build customer address from partner
+            address_parts = []
+            if so.partner_id.street:
+                address_parts.append(so.partner_id.street)
+            if so.partner_id.street2:
+                address_parts.append(so.partner_id.street2)
+            if so.partner_id.city:
+                address_parts.append(so.partner_id.city)
+            if so.partner_id.state_id:
+                address_parts.append(so.partner_id.state_id.name)
+            if so.partner_id.zip:
+                address_parts.append(so.partner_id.zip)
+            if so.partner_id.country_id:
+                address_parts.append(so.partner_id.country_id.name)
+            
+            self.customer_address = ', '.join(address_parts)
+            
+            # Set customer contact information
+            if so.partner_id.phone:
+                self.phone = so.partner_id.phone
+            elif so.partner_id.mobile:
+                self.phone = so.partner_id.mobile
+                
+            if so.partner_id.email:
+                self.email = so.partner_id.email
+        
+        # Get motorcycle product from order line
+        mc_line = so.order_line.filtered(lambda l: so._is_mc_product(l.product_id))
+        if mc_line:
+            mc_product = mc_line[0].product_id
+            
+            # Extract MODEL from product name
+            if mc_product and mc_product.name:
+                import re
+                model_name = mc_product.name
+                model_name = re.sub(r'\[.*?\]', '', model_name)
+                model_name = re.sub(r'\(.*?\)', '', model_name)
+                model_name = ' '.join(model_name.split()).strip()
+                self.model = model_name
+            
+            # Extract BRAND from product internal reference
+            if mc_product and mc_product.default_code and len(mc_product.default_code) >= 2:
+                code = mc_product.default_code[:2].upper()
+                brand_map = {
+                    'HO': 'honda',
+                    'YA': 'yamaha', 
+                    'KA': 'kawasaki',
+                    'SU': 'suzuki',
+                    'SK': 'skygo'
+                }
+                brand = brand_map.get(code, False)
+                if brand:
+                    self.brand = brand
+            
+            # Set QUANTITY from sale order line
+            self.qty = mc_line[0].product_uom_qty
+            
+            # Extract stock lot information
+            pickings = self.env['stock.picking'].search([('origin', '=', so.name)])
+            lot_info = None
+            
+            for picking in pickings:
+                for move in picking.move_lines:
+                    if move.product_id == mc_product:
+                        if hasattr(move, 'lot_ids') and move.lot_ids:
+                            lot_info = move.lot_ids[0]
+                        elif hasattr(move, 'move_line_ids'):
+                            for move_line in move.move_line_ids:
+                                if move_line.lot_id:
+                                    lot_info = move_line.lot_id
+                                    break
+                        break
+                if lot_info:
+                    break
+            
+            if not lot_info and mc_product:
+                lots = self.env['stock.production.lot'].search([
+                    ('product_id', '=', mc_product.id)
+                ], limit=1)
+                if lots:
+                    lot_info = lots[0]
+            
+            # Extract data from stock lot
+            if lot_info:
+                if hasattr(lot_info, 'name'):
+                    self.engine_no = lot_info.name
+                elif hasattr(lot_info, 'engine_no'):
+                    self.engine_no = lot_info.engine_no
+                elif hasattr(lot_info, 'x_studio_engine_no'):
+                    self.engine_no = lot_info.x_studio_engine_no
+                
+                if hasattr(lot_info, 'chasis_number'):
+                    self.frame_no = lot_info.chasis_number
+                elif hasattr(lot_info, 'chassis_number'):
+                    self.frame_no = lot_info.chassis_number
+                elif hasattr(lot_info, 'x_studio_chassis_no'):
+                    self.frame_no = lot_info.x_studio_chassis_no
+                elif hasattr(lot_info, 'frame_no'):
+                    self.frame_no = lot_info.frame_no
+                
+                if hasattr(lot_info, 'color'):
+                    self.color = lot_info.color
+                elif hasattr(lot_info, 'x_studio_color'):
+                    self.color = lot_info.x_studio_color
+        
+        # Copy WRC Information tab fields if they exist
+        if hasattr(so, 'wrc_color') and so.wrc_color:
+            self.color = so.wrc_color
+        if hasattr(so, 'wrc_engine') and so.wrc_engine:
+            self.engine_no = so.wrc_engine
+        if hasattr(so, 'wrc_frame') and so.wrc_frame:
+            self.frame_no = so.wrc_frame
+        if hasattr(so, 'wrc_classification') and so.wrc_classification:
+            self.classification = so.wrc_classification
+        if hasattr(so, 'wrc_model') and so.wrc_model:
+            self.model = so.wrc_model
+        if hasattr(so, 'wrc_brand') and so.wrc_brand:
+            self.brand = so.wrc_brand
+        if hasattr(so, 'wrc_payment_basis') and so.wrc_payment_basis:
+            self.payment_basis = so.wrc_payment_basis
+        if hasattr(so, 'wrc_qty') and so.wrc_qty:
+            self.qty = so.wrc_qty
+        if hasattr(so, 'wrc_purchase_date') and so.wrc_purchase_date:
+            self.purchase_date = so.wrc_purchase_date
+        
+        # Set payment basis from payment terms
+        if so.payment_term_id and not self.payment_basis:
+            payment_term_name = so.payment_term_id.name.lower()
+            if 'cash' in payment_term_name or 'immediate' in payment_term_name:
+                self.payment_basis = 'cash'
+            elif 'installment' in payment_term_name or 'term' in payment_term_name:
+                self.payment_basis = 'installment'
+            else:
+                self.payment_basis = 'cash'
+        
+        # Set purchase date from order date
+        if so.date_order and not self.purchase_date:
+            self.purchase_date = so.date_order.date()
+        
+        # Set dealer information
+        if so.company_id:
+            self.selling_dealer = so.company_id.name
+            
+            if hasattr(so.company_id, 'partner_id') and so.company_id.partner_id.ref:
+                self.dealer_code = so.company_id.partner_id.ref
+            else:
+                company_name = so.company_id.name.upper()
+                dealer_code = ''.join(word[:2] for word in company_name.split()[:2])
+                self.dealer_code = dealer_code
+            
+            address_parts = []
+            if so.company_id.street:
+                address_parts.append(so.company_id.street)
+            if so.company_id.street2:
+                address_parts.append(so.company_id.street2)
+            if so.company_id.city:
+                address_parts.append(so.company_id.city)
+            if so.company_id.state_id:
+                address_parts.append(so.company_id.state_id.name)
+            if so.company_id.zip:
+                address_parts.append(so.company_id.zip)
+            if so.company_id.country_id:
+                address_parts.append(so.company_id.country_id.name)
+            
+            self.dealer_address = ', '.join(address_parts)
+        
+        # Copy WRC number if it exists
+        if hasattr(so, 'wrc_no') and so.wrc_no:
+            self.wrc_no = so.wrc_no
 
     def action_auto_fill_from_sale_order(self):
         """Manual action to auto-fill fields from sale order - just fills form, doesn't save"""
@@ -515,8 +847,7 @@ class WrcRecord(models.Model):
             # If no brand in vals, try to get from sale_order_id
             if not brand and vals.get('sale_order_id'):
                 sale_order = self.env['sale.order'].browse(vals.get('sale_order_id'))
-                if hasattr(sale_order, 'wrc_brand') and sale_order.wrc_brand:
-                    brand = sale_order.wrc_brand
+                brand = sale_order.wrc_brand
             
             # Generate brand-specific WRC number
             if brand:
@@ -532,88 +863,70 @@ class WrcRecord(models.Model):
             else:
                 # Fallback to generic sequence
                 vals['wrc_no'] = self.env['ir.sequence'].next_by_code('wrc.record') or 'WRC-New'
-        
-        # Create the record
-        new_record = super().create(vals)
-        _logger.info(f"WRC Record Create: Created record {new_record.id} with WRC No: {new_record.wrc_no}")
-        
-        return new_record
+                
+        return super().create(vals)
 
     def write(self, vals):
-        """Override write to prevent auto-filled data loss during save"""
+        """Override write to handle coupon line changes, prevent auto-fill during save, and create Honda service coupons"""
+        # CRITICAL: Set context flag to prevent auto-fill onchange during save
+        _logger.info(f"WRC Record Write: Setting skip_wrc_autofill context flag for record {self.id if self.id else 'new'}")
+        self = self.with_context(skip_wrc_autofill=True, from_ui=True, no_onchange=True)
+        
+        # Log what fields are being written
         if vals:
-            _logger.info(f"WRC Record Write: Saving fields {list(vals.keys())} for record {self.id}")
-        
-        # CRITICAL FIX: Store all auto-filled values BEFORE any write operation
-        auto_filled_backup = {}
-        if self.id and self.sale_order_id:
-            # These are the fields that get auto-filled and shouldn't be cleared
-            critical_fields = {
-                'customer_name': self.customer_name,
-                'customer_address': self.customer_address, 
-                'model': self.model,
-                'brand': self.brand,
-                'engine_no': self.engine_no,
-                'frame_no': self.frame_no,
-                'color': self.color,
-                'partner_id': self.partner_id.id if self.partner_id else False,
-                'classification': self.classification,
-                'qty': self.qty
-            }
+            _logger.info(f"WRC Record Write: Writing fields {list(vals.keys())} for record {self.id if self.id else 'new'}")
             
-            # Only backup non-empty values
-            for field, value in critical_fields.items():
-                if value:
-                    auto_filled_backup[field] = value
-            
-            _logger.info(f"WRC Record Write: Backed up {len(auto_filled_backup)} critical fields before save")
+        # CRITICAL: Prevent any onchange from clearing important fields during save
+        # If this is a save operation and no important fields are being explicitly updated,
+        # ensure we don't lose existing field values
+        important_fields = ['customer_name', 'model', 'brand', 'engine_no', 'frame_no', 'phone', 'email', 'color']
+        if self.id and vals:
+            for field in important_fields:
+                # If an important field is not being updated in this write, but it has a value,
+                # make sure we preserve it by not allowing it to be cleared
+                if field not in vals and hasattr(self, field) and getattr(self, field):
+                    current_value = getattr(self, field)
+                    if current_value:
+                        _logger.info(f"WRC Record Write: Preserving existing {field}: {current_value}")
         
-        # Disable ALL onchange during write
-        protected_self = self.with_context(
-            skip_onchange=True, 
-            from_write=True,
-            no_auto_fill=True,
-            disable_onchange=True
-        )
+        res = super().write(vals)
         
-        # Perform the write operation
-        result = super(WrcRecord, protected_self).write(vals)
-        
-        # CRITICAL FIX: Immediately restore any cleared auto-filled values
-        if auto_filled_backup:
-            # Check what got cleared and restore it
-            self.refresh()  # Get latest state
-            restore_vals = {}
-            
-            for field, backed_up_value in auto_filled_backup.items():
-                current_value = getattr(self, field, False)
-                
-                # If the field was cleared during save AND it wasn't intentionally cleared in vals
-                if not current_value and backed_up_value and field not in vals:
-                    restore_vals[field] = backed_up_value
-                    _logger.warning(f"WRC Record Write: Restoring cleared field '{field}': {backed_up_value}")
-            
-            # Restore cleared fields immediately
-            if restore_vals:
-                super(WrcRecord, self.with_context(skip_onchange=True, from_write=True)).write(restore_vals)
-                _logger.info(f"WRC Record Write: Restored {len(restore_vals)} auto-filled fields")
-        
-        _logger.info(f"WRC Record Write: Successfully saved record {self.id}")
-        
-        # Handle business logic
+        # If coupon lines are added and record is still in draft, suggest confirmation
         if 'coupon_line_ids' in vals and self.state == 'draft' and self.coupon_line_ids:
+            # Auto-confirm if all required fields are filled
             if self._check_required_fields_filled():
                 try:
                     self.action_confirm()
-                    _logger.info(f"Auto-confirmed WRC record {self.wrc_no}")
+                    _logger.info(f"Auto-confirmed WRC record {self.wrc_no} after coupon lines added")
                 except Exception as e:
-                    _logger.warning(f"Failed to auto-confirm WRC record: {str(e)}")
+                    _logger.warning(f"Failed to auto-confirm WRC record {self.wrc_no}: {str(e)}")
         
+        # If coupon_number is being set for Honda, create service coupons
         if vals.get('coupon_number') and self.brand == 'honda':
             self.create_honda_service_coupons()
             
-        return result
-
+        return res
+    
+    def action_refresh_fields_from_sale_order(self):
+        """Button action to manually refresh fields from sale order - safe alternative to onchange"""
+        if not self.sale_order_id:
+            raise UserError("Please select a Sale Order first before refreshing fields.")
+        
+        # This is a manual action, so we can safely populate fields
+        _logger.info(f"WRC Record: Manual refresh requested for sale order {self.sale_order_id.name}")
+        self._manual_auto_fill_from_sale_order()
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Fields Refreshed',
+                'message': 'Fields have been refreshed from the selected Sale Order.',
+                'type': 'success',
+                'sticky': False,
+            }
+        }
+    
     def _check_required_fields_filled(self):
         """Check if all required fields are filled for confirmation"""
         required_fields = [

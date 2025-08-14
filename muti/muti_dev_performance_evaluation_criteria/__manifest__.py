@@ -38,6 +38,7 @@
         'views/sale_order_view.xml',  # Enabled - WRC tab for motorcycle sales only
         'views/sale_order_header_view.xml',  # Enabled - WRC action buttons
         'views/wrc_record_views.xml',
+        'views/wrc_creation_wizard_views.xml',  # New WRC creation wizard
         'views/service_coupon_views.xml',
     ],
     'installable': True,

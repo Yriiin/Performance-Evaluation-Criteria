@@ -26,6 +26,7 @@ class ServiceCoupon(models.Model):
         ('pms_1', 'PMS 1 (500-2,000 km / 3 months)'),
         ('pms_2', 'PMS 2 (2,001-6,000 km / 7 months)'),
         ('pms_3', 'PMS 3 (6,001-12,000 km / 12 months)'),
+        ('pms_4', 'PMS 4 (8,501-11,500 km / 12 months)'),
     ], string='Coupon Type', required=True)
     
     # PMS Criteria
@@ -89,7 +90,8 @@ class ServiceCoupon(models.Model):
             type_map = {
                 'pms_1': 'SC1',
                 'pms_2': 'SC2', 
-                'pms_3': 'SC3'
+                'pms_3': 'SC3',
+                'pms_4': 'SC4'
             }
             vals['fsc_sequence'] = type_map.get(vals['coupon_type'], 'SC')
         
@@ -199,7 +201,7 @@ class ServiceCoupon(models.Model):
             pms_months = 12
             
         # Generate next coupon number
-        base_coupon_number = self.coupon_number.replace('-PMS_1', '').replace('-PMS_2', '').replace('-PMS_3', '')
+        base_coupon_number = self.coupon_number.replace('-PMS_1', '').replace('-PMS_2', '').replace('-PMS_3', '').replace('-PMS_4', '')
         next_coupon_number = f"{base_coupon_number}-{next_coupon_type.upper()}"
         
         # Create next PMS coupon

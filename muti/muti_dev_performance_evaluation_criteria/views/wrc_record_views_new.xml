@@ -71,10 +71,8 @@
                     <!-- Sale Order Selection at the top -->
                     <group>
                         <group string="Sale Order Information">
-                            <field name="sale_order_id" 
-                                   options="{'no_create': True, 'no_edit': True}" 
-                                   attrs="{'readonly': [('state', '=', 'confirmed')]}"
-                                   help="Select any motorcycle sale order"/>
+                            <field name="sale_order_id" options="{'no_create': True, 'no_edit': True}" 
+                                   attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
                             <field name="purchase_date" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
                             <field name="branch_id" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
                         </group>
@@ -83,64 +81,71 @@
                         </group>
                     </group>
                     
-                    <!-- Auto-fill Notification -->
-                    <div class="alert alert-info" role="alert" 
-                         attrs="{'invisible': [('sale_order_id', '!=', False)]}">
-                        <i class="fa fa-info-circle"/> <strong>Auto-fill Available:</strong> 
-                        Select a sale order to automatically populate customer and unit information.
-                    </div>
-                    
                     <group>
                         <group string="Customer Profile">
-                            <field name="customer_name" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('customer_name', '!=', False), ('sale_order_id', '!=', False)]}"/>
-                            <field name="customer_address" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('customer_address', 'not in', [False, '']), ('sale_order_id', '!=', False)]}"/>
-                            <field name="phone" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
-                            <field name="email" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
-                            <field name="birthday" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('birthday', '!=', False), ('sale_order_id', '!=', False)]}"/>
-                            <field name="age" readonly="1"/>
+                            <field name="customer_name" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('customer_name', '!=', False)]}"/>
+                            <field name="customer_address" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('customer_address', '!=', False)]}"/>
+                            <field name="phone" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('phone', '!=', False)]}"/>
+                            <field name="email" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('email', '!=', False)]}"/>
+                            <field name="birthday" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('birthday', '!=', False)]}"/>
+                            <field name="age" attrs="{'readonly': True}"/>
                         </group>
                         <group string="Dealer Profile">
-                            <field name="selling_dealer" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('selling_dealer', '!=', False), ('sale_order_id', '!=', False)]}"/>
-                            <field name="dealer_code" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('dealer_code', '!=', False), ('sale_order_id', '!=', False)]}"/>
-                            <field name="dealer_address" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('dealer_address', '!=', False), ('sale_order_id', '!=', False)]}"/>
+                            <field name="selling_dealer" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('selling_dealer', '!=', False)]}"/>
+                            <field name="dealer_code" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('dealer_code', '!=', False)]}"/>
+                            <field name="dealer_address" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('dealer_address', '!=', False)]}"/>
                         </group>
                     </group>
                     
                     <group>
                         <group string="Unit Information">
                             <field name="state" invisible="1"/>
-                            <field name="model" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('model', '!=', False), ('sale_order_id', '!=', False)]}"/>
-                            <field name="brand" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('brand', '!=', False), ('sale_order_id', '!=', False)]}"/>
-                            <field name="classification" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
-                            <field name="color" attrs="{'readonly': [('state', '=', 'confirmed')]}"/>
-                            <field name="qty" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('qty', '>', 0), ('sale_order_id', '!=', False)]}"/>
-                            <field name="payment_basis" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('payment_basis', '!=', False), ('sale_order_id', '!=', False)]}"/>
-                            <field name="purchase_date" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('purchase_date', '!=', False), ('sale_order_id', '!=', False)]}"/>
+                            <field name="model" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('model', '!=', False)]}"/>
+                            <field name="brand" attrs="{'readonly': [('brand', '!=', False)]}"/>
+                            <field name="classification" widget="selection" attrs="{'readonly': [('classification', '!=', False)]}"/>
+                            <field name="color" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('color', '!=', False)]}"/>
+                            <field name="qty" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('qty', '>', 0)]}"/>
+                            <field name="payment_basis" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('payment_basis', '!=', False)]}"/>
+                            <field name="purchase_date" attrs="{'readonly': [('purchase_date', '!=', False)]}"/>
                         </group>
                         <group string="Unit Numbers">
-                            <field name="engine_no" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('engine_no', '!=', False), ('sale_order_id', '!=', False)]}"/>
-                            <field name="frame_no" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), '&amp;', ('frame_no', '!=', False), ('sale_order_id', '!=', False)]}"/>
+                            <field name="engine_no" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('engine_no', '!=', False)]}"/>
+                            <field name="frame_no" attrs="{'readonly': ['|', ('state', '=', 'confirmed'), ('frame_no', '!=', False)]}"/>
                         </group>
                     </group>
                     
-                    <!-- Coupon Registration Lines - Only visible in draft state -->
-                    <group string="Coupon Registration" col="1" attrs="{'invisible': [('state', '!=', 'draft')]}">
+                    <!-- Coupon Registration Lines -->
+                    <group string="Coupon Registration" col="1">
+                        <div class="alert alert-warning" role="alert" attrs="{'invisible': [('state', '!=', 'draft')]}">
+                            <strong>Note:</strong> Service coupons will be created when this WRC record is confirmed.
+                            <button name="action_confirm" type="object" class="btn btn-sm btn-primary ml-2"
+                                    attrs="{'invisible': [('state', '!=', 'draft')]}">
+                                <i class="fa fa-check"/> Confirm &amp; Create Service Coupons
+                            </button>
+                            <button name="action_create_service_coupons" type="object" class="btn btn-sm btn-success ml-1"
+                                    attrs="{'invisible': [('state', '!=', 'draft')]}">
+                                <i class="fa fa-plus"/> Create Service Coupons Only
+                            </button>
+                        </div>
+                        <div class="alert alert-success" role="alert" 
+                             attrs="{'invisible': ['|', ('state', '=', 'draft'), ('coupon_count', '=', 0)]}">
+                            <strong>Service Coupons Created:</strong> <field name="coupon_count"/> service coupons are available in the Service Coupons tab.
+                        </div>
                         <field name="coupon_line_ids" 
-                               nolabel="1"
-                               widget="one2many">
-                            <tree editable="bottom" create="true" delete="true" class="o_list_view_table_full_width">
-                                <field name="coupon_number" string="Coupon Number" required="1"/>
-                                <field name="coupon_type" string="Type" required="1"/>
-                                <field name="pms_km_min" string="Min KM"/>
-                                <field name="pms_km_max" string="Max KM"/>
-                                <field name="pms_months" string="Months"/>
+                               widget="one2many" context="{'tree_view_ref': 'muti_dev_performance_evaluation_criteria.view_wrc_coupon_line_tree'}">
+                            <tree editable="bottom" create="true" delete="true" decoration-info="True">
+                                <field name="coupon_number" string="Coupon Number" width="150px"/>
+                                <field name="coupon_type" string="Type" width="250px"/>
+                                <field name="pms_km_min" string="Min KM" width="80px"/>
+                                <field name="pms_km_max" string="Max KM" width="80px"/>
+                                <field name="pms_months" string="Months" width="80px"/>
                                 <field name="notes" string="Notes"/>
                             </tree>
                         </field>
                     </group>
                     
-                    <!-- Service Coupons Section - Only visible when confirmed -->
-                    <notebook attrs="{'invisible': [('state', '=', 'draft')]}">
+                    <!-- Service Coupons Section -->
+                    <notebook>
                         <page string="Service Coupons" name="service_coupons">
                             <field name="service_coupon_ids" readonly="1">
                                 <tree decoration-warning="state == 'active' and is_overdue" 
@@ -150,7 +155,7 @@
                                     <field name="coupon_type"/>
                                     <field name="state"/>
                                     <field name="due_date"/>
-                                    <field name="actual_service_date"/>
+                                    <field name="date_used"/>
                                     <field name="is_overdue" invisible="1"/>
                                 </tree>
                             </field>
@@ -184,7 +189,7 @@
                 <filter name="bigbike" string="BigBike" domain="[('classification', '=', 'bigbike')]"/>
                 <separator/>
                 <filter name="honda_brand" string="Honda" domain="[('brand', '=', 'honda')]"/>
-                <filter name="has_coupons" string="Has Service Coupons" domain="[('service_coupon_ids', '!=', False)]"/>
+                <filter name="has_coupons" string="Has Coupons" domain="[('coupon_count', '>', 0)]"/>
                 <group expand="0" string="Group By">
                     <filter name="group_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
                     <filter name="group_sale_order" string="Sale Order" context="{'group_by': 'sale_order_id'}"/>
@@ -210,11 +215,32 @@
             </p>
             <p>
                 WRC Records track motorcycle sales information with automated coupon management.
-                Select a sale order to automatically populate all WRC fields.
+                Records are automatically created when motorcycle sales are fully invoiced.
             </p>
+        </field>
+    </record>
+
+    <!-- Cleanup Duplicates Server Action -->
+    <record id="action_cleanup_duplicate_wrc" model="ir.actions.server">
+        <field name="name">Cleanup Duplicate WRC Records</field>
+        <field name="model_id" ref="model_wrc_record"/>
+        <field name="state">code</field>
+        <field name="code">
+result = env['wrc.record'].cleanup_duplicate_wrc_records()
+action = {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'title': 'Cleanup Complete',
+        'message': result['message'],
+        'type': 'success' if result['duplicates_removed'] > 0 else 'info',
+        'sticky': True,
+    }
+}
         </field>
     </record>
 
     <!-- Menu Items -->
     <menuitem id="menu_wrc_records" name="WRC Records" parent="menu_wrc_root" action="action_wrc_record" sequence="10"/>
+    <menuitem id="menu_cleanup_duplicates" name="Cleanup Duplicates" parent="menu_wrc_root" action="action_cleanup_duplicate_wrc" sequence="99"/>
 </odoo>

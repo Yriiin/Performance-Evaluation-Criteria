@@ -1,5 +1,6 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError
+from dateutil.relativedelta import relativedelta
 import logging
 import re
 
@@ -18,6 +19,7 @@ class SaleOrderInherit(models.Model):
     wrc_phone = fields.Char('Phone Number')
     wrc_email = fields.Char('Email')
     wrc_birthday = fields.Date('Birthday')
+    wrc_age = fields.Integer('Age', compute='_compute_wrc_age', store=True)
     
     # Dealer Profile (Auto-filled, Read-only)
     wrc_selling_dealer = fields.Char('Selling Dealer')
@@ -62,7 +64,7 @@ class SaleOrderInherit(models.Model):
     coupon_count = fields.Integer('Coupon Count', compute='_compute_coupon_count')
     is_mc_sale = fields.Boolean('Is Motorcycle Sale', compute='_compute_sale_type', store=True)
     show_wrc = fields.Boolean('Show WRC', compute='_compute_show_wrc', store=True)
-    wrc_transferred = fields.Boolean('WRC Transferred', default=False)
+    wrc_transferred = fields.Boolean('WRC Transferred', compute='_compute_has_wrc', store=True)
     wrc_auto_filled = fields.Boolean('WRC Auto-filled', default=False)
     wrc_data_available = fields.Boolean('WRC Data Available', compute='_compute_wrc_data_available')
     
@@ -75,18 +77,27 @@ class SaleOrderInherit(models.Model):
         for record in self:
             record.wrc_customer_name = record.partner_id.name if record.partner_id else ''
 
-    @api.depends('invoice_status', 'is_mc_sale')
-    def _compute_wrc_auto_save(self):
-        """Auto-save WRC record when sale order is fully invoiced"""
+    @api.depends('wrc_birthday')
+    def _compute_wrc_age(self):
+        """Compute age based on birthday"""
+        from datetime import datetime
+        today = datetime.today().date()
         for record in self:
-            if (record.is_mc_sale and 
-                record.invoice_status == 'invoiced' and 
-                not record.wrc_transferred):
-                # Check if WRC record already exists
-                existing_wrc = record.wrc_records.filtered(lambda r: r.state != 'cancelled')
-                if not existing_wrc:
-                    record._create_wrc_record()
-                    record.wrc_transferred = True
+            if record.wrc_birthday:
+                record.wrc_age = today.year - record.wrc_birthday.year - (
+                    (today.month, today.day) < (record.wrc_birthday.month, record.wrc_birthday.day)
+                )
+            else:
+                record.wrc_age = 0
+
+    @api.depends('invoice_status', 'is_mc_sale', 'show_wrc')
+    def _compute_wrc_auto_save(self):
+        """Auto-fill data when WRC tab is shown - auto-save moved to write method only"""
+        for record in self:
+            # Auto-fill WRC data when show_wrc becomes True (WRC tab is accessible)
+            if record.show_wrc and record.is_mc_sale and not record.wrc_auto_filled:
+                record.action_auto_fill_wrc()
+                record.wrc_auto_filled = True
 
     @api.depends('is_mc_sale', 'order_line', 'order_line.product_id')
     def _compute_brand(self):
@@ -135,6 +146,20 @@ class SaleOrderInherit(models.Model):
         """Trigger auto-fill when partner or order lines change"""
         if self.is_mc_sale and not self.wrc_customer_name:
             self.action_auto_fill_wrc()
+
+    @api.onchange('wrc_no')
+    def _onchange_wrc_no(self):
+        """Trigger auto-fill when WRC number field is accessed/changed"""
+        if self.is_mc_sale and not self.wrc_auto_filled:
+            self.action_auto_fill_wrc()
+            self.wrc_auto_filled = True
+
+    @api.onchange('wrc_customer_name')
+    def _onchange_wrc_customer_name(self):
+        """Trigger auto-fill when customer name field is accessed"""
+        if self.is_mc_sale and not self.wrc_auto_filled:
+            self.action_auto_fill_wrc()
+            self.wrc_auto_filled = True
 
     def action_auto_fill_wrc(self):
         """Manual button to auto-fill WRC data from picking/lot info"""
@@ -399,7 +424,7 @@ class SaleOrderInherit(models.Model):
             return True
 
     def action_refresh_wrc_data(self):
-        """Manual refresh of WRC data and trigger auto-fill"""
+        """Manual refresh of WRC data and check for auto-transfer"""
         self.ensure_one()
         try:
             _logger.info(f"Manual refresh triggered for order {self.name}")
@@ -410,6 +435,38 @@ class SaleOrderInherit(models.Model):
             
             # Trigger auto-fill
             self.action_auto_fill_wrc()
+            
+            # Check if we should trigger auto-transfer now
+            if (self.is_mc_sale and 
+                not self.wrc_transferred and 
+                self.invoice_status == 'invoiced' and
+                self._check_wrc_fields_complete()):
+                
+                # Check if WRC record already exists
+                existing_wrc = self.wrc_records.filtered(lambda r: r.state != 'cancelled')
+                if not existing_wrc:
+                    try:
+                        _logger.info(f"Manual refresh: Auto-transfer triggered for {self.name}")
+                        wrc_record = self.with_context(auto_transfer=True, skip_auto_transfer=True)._create_wrc_record()
+                        
+                        # Auto-confirm if coupon lines exist
+                        if wrc_record and self.wrc_coupon_line_ids:
+                            try:
+                                wrc_record.action_confirm()
+                                _logger.info(f"Auto-confirmed WRC record {wrc_record.wrc_no}")
+                            except Exception as e:
+                                _logger.warning(f"Failed to auto-confirm: {str(e)}")
+                                
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'message': f'WRC data refreshed and WRC record {wrc_record.wrc_no if wrc_record else ""} created successfully',
+                                'type': 'success',
+                            }
+                        }
+                    except Exception as e:
+                        _logger.error(f"Auto-transfer during refresh failed: {str(e)}")
             
             return {
                 'type': 'ir.actions.client',
@@ -430,10 +487,41 @@ class SaleOrderInherit(models.Model):
                 }
             }
 
+    def _check_wrc_fields_complete(self):
+        """Check if all required WRC fields are filled for auto-transfer"""
+        self.ensure_one()
+        
+        # Essential fields that must be filled for auto-transfer
+        required_fields = [
+            'wrc_no',  # WRC number must be manually entered
+            'wrc_customer_name',
+            'wrc_model',
+            'wrc_engine', 
+            'wrc_frame',
+            'wrc_brand',
+            'wrc_purchase_date'
+        ]
+        
+        for field in required_fields:
+            if not getattr(self, field, None):
+                _logger.info(f"WRC auto-transfer blocked: Field '{field}' is empty for order {self.name}")
+                return False
+        
+        # Check if at least one coupon line exists
+        if not self.wrc_coupon_line_ids:
+            _logger.info(f"WRC auto-transfer blocked: No coupon lines for order {self.name}")
+            return False
+            
+        _logger.info(f"WRC auto-transfer: All required fields complete for order {self.name}")
+        return True
+
+    @api.depends('wrc_records')
     @api.depends('wrc_records')
     def _compute_has_wrc(self):
         for record in self:
-            record.has_wrc = bool(record.wrc_records)
+            has_wrc_records = bool(record.wrc_records)
+            record.has_wrc = has_wrc_records
+            record.wrc_transferred = has_wrc_records
 
     @api.depends('wrc_records')
     def _compute_wrc_count(self):
@@ -531,7 +619,7 @@ class SaleOrderInherit(models.Model):
                         if can_auto_create:
                             try:
                                 _logger.info(f"Auto-save triggered for fully invoiced motorcycle sale {record.name} with coupon {record.wrc_coupon_number}")
-                                record._create_wrc_record_auto()
+                                record._create_wrc_record()
                             except Exception as e:
                                 _logger.error(f"Auto-save failed for order {record.name}: {str(e)}")
                         else:
@@ -599,6 +687,76 @@ class SaleOrderInherit(models.Model):
             return True
         return False
 
+    def get_brand_pms_schedules(self, brand):
+        """Get brand-specific PMS schedules"""
+        schedules = {
+            'honda': [
+                ('pms_1', '1st PMS: 500–2,000 km or 3 months'),
+                ('pms_2', '2nd PMS: 2,001–6,000 km or 7 months'),
+                ('pms_3', '3rd PMS: 6,001–12,000 km or 12 months'),
+            ],
+            'kawasaki': [
+                ('pms_1', '1st PMS: 1,000 km or 1 month'),
+                ('pms_2', '2nd PMS: 4,000 km or 4 months'),
+                ('pms_3', '3rd PMS: 8,000 km or 8 months'),
+                ('pms_4', '4th PMS: 12,000 km or 12 months'),
+            ],
+            'suzuki': [
+                ('pms_1', '1st PMS: 1,000 km or 1 month'),
+                ('pms_2', '2nd PMS: 4,000 km or 4 months'),
+                ('pms_3', '3rd PMS: 8,000 km or 8 months'),
+                ('pms_4', '4th PMS: 12,000 km or 12 months'),
+            ],
+            'skygo': [
+                ('pms_1', '1st PMS: 500 km or 1 month'),
+                ('pms_2', '2nd PMS: 3,000 km or 3 months'),
+                ('pms_3', '3rd PMS: 6,000 km or 6 months'),
+                ('pms_4', '4th PMS: 10,000 km or 12 months'),
+            ],
+            'yamaha': [
+                ('pms_1', '1st PMS: 0-1,500 kms or 1 month'),
+                ('pms_2', '2nd PMS: 1,501-5,500 kms or 4 months'),
+                ('pms_3', '3rd PMS: 5,501-8,500 kms or 8 months'),
+                ('pms_4', '4th PMS: 8,501-11,500 kms or 12 months'),
+            ],
+        }
+        return schedules.get(brand, [])
+
+    def get_brand_pms_details(self, brand, pms_type):
+        """Get specific PMS details for brand and type"""
+        pms_data = {
+            'honda': {
+                'pms_1': {'km_min': 500, 'km_max': 2000, 'months': 3},
+                'pms_2': {'km_min': 2001, 'km_max': 6000, 'months': 7},
+                'pms_3': {'km_min': 6001, 'km_max': 12000, 'months': 12},
+            },
+            'kawasaki': {
+                'pms_1': {'km_min': 1000, 'km_max': 1000, 'months': 1},
+                'pms_2': {'km_min': 4000, 'km_max': 4000, 'months': 4},
+                'pms_3': {'km_min': 8000, 'km_max': 8000, 'months': 8},
+                'pms_4': {'km_min': 12000, 'km_max': 12000, 'months': 12},
+            },
+            'suzuki': {
+                'pms_1': {'km_min': 1000, 'km_max': 1000, 'months': 1},
+                'pms_2': {'km_min': 4000, 'km_max': 4000, 'months': 4},
+                'pms_3': {'km_min': 8000, 'km_max': 8000, 'months': 8},
+                'pms_4': {'km_min': 12000, 'km_max': 12000, 'months': 12},
+            },
+            'skygo': {
+                'pms_1': {'km_min': 500, 'km_max': 500, 'months': 1},
+                'pms_2': {'km_min': 3000, 'km_max': 3000, 'months': 3},
+                'pms_3': {'km_min': 6000, 'km_max': 6000, 'months': 6},
+                'pms_4': {'km_min': 10000, 'km_max': 10000, 'months': 12},
+            },
+            'yamaha': {
+                'pms_1': {'km_min': 0, 'km_max': 1500, 'months': 1},
+                'pms_2': {'km_min': 1501, 'km_max': 5500, 'months': 4},
+                'pms_3': {'km_min': 5501, 'km_max': 8500, 'months': 8},
+                'pms_4': {'km_min': 8501, 'km_max': 11500, 'months': 12},
+            },
+        }
+        return pms_data.get(brand, {}).get(pms_type, {})
+
     @api.model
     def create(self, vals):
         """Override create"""
@@ -606,41 +764,77 @@ class SaleOrderInherit(models.Model):
         return record
 
     def write(self, vals):
-        """Override write to trigger auto-save when fully invoiced"""
+        """Override write to trigger auto-save when fully invoiced and fields are complete"""
         res = super().write(vals)
         
-        # Check if invoice_status changed to 'invoiced' OR if coupon/engine/frame data is added
-        if (vals.get('invoice_status') == 'invoiced' or 
-            vals.get('wrc_coupon_number') or 
-            vals.get('wrc_engine') or 
-            vals.get('wrc_frame')):
+        # Only trigger auto-transfer on CRITICAL field changes, not computed fields
+        critical_trigger_fields = ['invoice_status', 'wrc_no']  # Reduced to most critical fields only
+        
+        # Only proceed if we're not already in an auto-transfer context and critical fields changed
+        if (any(field in vals for field in critical_trigger_fields) and 
+            not self.env.context.get('skip_auto_transfer') and 
+            not self.env.context.get('auto_transfer')):
+            
             for record in self:
                 if (record.is_mc_sale and 
                     not record.wrc_transferred and 
-                    record.invoice_status == 'invoiced'):
-                    # Check if WRC record already exists
+                    record.invoice_status == 'invoiced' and
+                    record._check_wrc_fields_complete()):
+                    
+                    # Check if WRC record already exists (prevent duplicates)
                     existing_wrc = record.wrc_records.filtered(lambda r: r.state != 'cancelled')
                     if not existing_wrc:
-                        # Check if all required data is available for auto-creation
-                        can_auto_create = (
-                            record.wrc_coupon_number and 
-                            record.wrc_engine and 
-                            record.wrc_frame
-                        )
-                        
-                        if can_auto_create:
-                            try:
-                                _logger.info(f"Write method: Auto-save triggered for fully invoiced motorcycle sale {record.name} with coupon {record.wrc_coupon_number}")
-                                record._create_wrc_record_auto()
-                                record.wrc_transferred = True
-                            except Exception as e:
-                                _logger.error(f"Write method: Auto-save failed for {record.name}: {str(e)}")
-                        else:
-                            _logger.info(f"Write method: Auto-save skipped for {record.name} - missing required data (coupon: {bool(record.wrc_coupon_number)}, engine: {bool(record.wrc_engine)}, frame: {bool(record.wrc_frame)})")
+                        try:
+                            _logger.info(f"Write method: Auto-transfer triggered for fully invoiced motorcycle sale {record.name}")
+                            # Use context to prevent recursive calls
+                            wrc_record = record.with_context(auto_transfer=True, skip_auto_transfer=True)._create_wrc_record()
+                            
+                            # Send notification for auto-created WRC record
+                            if wrc_record:
+                                record._send_wrc_save_notification(wrc_record)
+                            
+                            # Auto-confirm the WRC record to create service coupons
+                            if wrc_record and record.wrc_coupon_line_ids:
+                                try:
+                                    wrc_record.action_confirm()
+                                    _logger.info(f"Auto-confirmed WRC record {wrc_record.wrc_no} and created service coupons")
+                                except Exception as e:
+                                    _logger.warning(f"Failed to auto-confirm WRC record {wrc_record.wrc_no}: {str(e)}")
+                                    
+                        except Exception as e:
+                            _logger.error(f"Write method: Auto-transfer failed for {record.name}: {str(e)}")
                     else:
                         _logger.info(f"Write method: WRC record already exists for {record.name}: {existing_wrc[0].wrc_no}")
-        
+                        # Use context to prevent recursion when marking as transferred
         return res
+
+    def _send_wrc_save_notification(self, wrc_record):
+        """Send immediate notification when WRC record is created via save"""
+        self.ensure_one()
+        
+        # Create notification message
+        message = f'🎉 WRC Record Created Successfully!\n\n' \
+                 f'Sale Order: {self.name}\n' \
+                 f'WRC Number: {wrc_record.wrc_no}\n' \
+                 f'Customer: {self.wrc_customer_name}\n' \
+                 f'Model: {self.wrc_model}'
+        
+        # Add service coupon info if applicable
+        if self.wrc_coupon_line_ids:
+            coupon_count = len(self.wrc_coupon_line_ids)
+            message += f'\n🎫 Service Coupons: {coupon_count} coupons created'
+        
+        # Send notification immediately when saving
+        self.env['bus.bus']._sendone(
+            self.env.user.partner_id,
+            'simple_notification',
+            {
+                'title': '🎉 WRC Registration Complete',
+                'message': message,
+                'type': 'success',
+                'sticky': True,
+            }
+        )
 
     def _create_wrc_record_auto(self):
         """Auto-create WRC record when sale order is fully invoiced"""
@@ -708,12 +902,8 @@ class SaleOrderInherit(models.Model):
         
         wrc_record = self.env['wrc.record'].create(vals)
         
-        # Mark as transferred and log success
-        self.wrc_transferred = True
+        # Log success (wrc_transferred will be computed automatically)
         _logger.info(f"WRC record {wrc_record.wrc_no} auto-created for fully invoiced motorcycle sale {self.name}")
-        
-        # Note: Service coupons will be manually created later
-        # Auto-generation only creates the WRC record with Customer Profile, Dealer Profile, and Unit Information
         
         return wrc_record
 
@@ -810,15 +1000,40 @@ class SaleOrderInherit(models.Model):
         
         # Create WRC record
         wrc_record = self._create_wrc_record()
-        self.wrc_transferred = True
         
         if wrc_record:
+            # Auto-confirm the WRC record to create service coupons if coupon lines exist
+            if self.wrc_coupon_line_ids:
+                try:
+                    wrc_record.action_confirm()
+                    coupon_count = len(self.wrc_coupon_line_ids)
+                    success_message = f'✅ WRC Record Created Successfully!\n\n' \
+                                    f'WRC Number: {wrc_record.wrc_no}\n' \
+                                    f'Customer: {self.wrc_customer_name}\n' \
+                                    f'Model: {self.wrc_model}\n' \
+                                    f'Service Coupons: {coupon_count} coupons created and ready for use'
+                except Exception as e:
+                    _logger.warning(f"Failed to auto-confirm WRC record {wrc_record.wrc_no}: {str(e)}")
+                    success_message = f'✅ WRC Record Created Successfully!\n\n' \
+                                    f'WRC Number: {wrc_record.wrc_no}\n' \
+                                    f'Customer: {self.wrc_customer_name}\n' \
+                                    f'Model: {self.wrc_model}\n' \
+                                    f'⚠️ Note: Manual confirmation needed for service coupons'
+            else:
+                success_message = f'✅ WRC Record Created Successfully!\n\n' \
+                                f'WRC Number: {wrc_record.wrc_no}\n' \
+                                f'Customer: {self.wrc_customer_name}\n' \
+                                f'Model: {self.wrc_model}\n' \
+                                f'ℹ️ No service coupons registered'
+                
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'message': f'WRC record {wrc_record.wrc_no} created successfully',
+                    'title': 'WRC Registration Complete',
+                    'message': success_message,
                     'type': 'success',
+                    'sticky': True,
                 }
             }
 
@@ -830,31 +1045,67 @@ class SaleOrderCouponLine(models.Model):
     
     order_id = fields.Many2one('sale.order', 'Sale Order', required=True, ondelete='cascade')
     coupon_number = fields.Char('Coupon Number', required=True)
-    coupon_type = fields.Selection([
-        ('pms_1', 'PMS 1 (500-2,000 km / 3 months)'),
-        ('pms_2', 'PMS 2 (2,001-6,000 km / 7 months)'),
-        ('pms_3', 'PMS 3 (6,001-12,000 km / 12 months)'),
-    ], string='Coupon Type', required=True)
+    coupon_type = fields.Selection('_get_coupon_type_selection', string='Coupon Type', required=True)
     pms_km_min = fields.Integer('Min KM')
     pms_km_max = fields.Integer('Max KM')
     pms_months = fields.Integer('Months Schedule')
     notes = fields.Text('Notes')
     
+    def _get_coupon_type_selection(self):
+        """Get coupon type selection based on brand"""
+        if self.order_id and self.order_id.wrc_brand:
+            brand = self.order_id.wrc_brand
+            if brand == 'honda':
+                return [
+                    ('pms_1', '1st PMS: 500–2,000 km or 3 months'),
+                    ('pms_2', '2nd PMS: 2,001–6,000 km or 7 months'),
+                    ('pms_3', '3rd PMS: 6,001–12,000 km or 12 months'),
+                ]
+            elif brand == 'kawasaki':
+                return [
+                    ('pms_1', '1st PMS: 1,000 km or 1 month'),
+                    ('pms_2', '2nd PMS: 4,000 km or 4 months'),
+                    ('pms_3', '3rd PMS: 8,000 km or 8 months'),
+                    ('pms_4', '4th PMS: 12,000 km or 12 months'),
+                ]
+            elif brand == 'suzuki':
+                return [
+                    ('pms_1', '1st PMS: 1,000 km or 1 month'),
+                    ('pms_2', '2nd PMS: 4,000 km or 4 months'),
+                    ('pms_3', '3rd PMS: 8,000 km or 8 months'),
+                    ('pms_4', '4th PMS: 12,000 km or 12 months'),
+                ]
+            elif brand == 'skygo':
+                return [
+                    ('pms_1', '1st PMS: 500 km or 1 month'),
+                    ('pms_2', '2nd PMS: 3,000 km or 3 months'),
+                    ('pms_3', '3rd PMS: 6,000 km or 6 months'),
+                    ('pms_4', '4th PMS: 10,000 km or 12 months'),
+                ]
+            elif brand == 'yamaha':
+                return [
+                    ('pms_1', '1st PMS: 0-1,500 kms or 1 month'),
+                    ('pms_2', '2nd PMS: 1,501-5,500 kms or 4 months'),
+                    ('pms_3', '3rd PMS: 5,501-8,500 kms or 8 months'),
+                    ('pms_4', '4th PMS: 8,501-11,500 kms or 12 months'),
+                ]
+        # Default options if no brand selected
+        return [
+            ('pms_1', 'PMS 1'),
+            ('pms_2', 'PMS 2'),
+            ('pms_3', 'PMS 3'),
+            ('pms_4', 'PMS 4'),
+        ]
+    
     @api.onchange('coupon_type')
     def _onchange_coupon_type(self):
-        """Auto-populate KM and months based on coupon type"""
-        if self.coupon_type == 'pms_1':
-            self.pms_km_min = 500
-            self.pms_km_max = 2000
-            self.pms_months = 3
-        elif self.coupon_type == 'pms_2':
-            self.pms_km_min = 2001
-            self.pms_km_max = 6000
-            self.pms_months = 7
-        elif self.coupon_type == 'pms_3':
-            self.pms_km_min = 6001
-            self.pms_km_max = 12000
-            self.pms_months = 12
+        """Auto-populate KM and months based on coupon type and brand"""
+        if self.order_id and self.order_id.wrc_brand and self.coupon_type:
+            pms_details = self.order_id.get_brand_pms_details(self.order_id.wrc_brand, self.coupon_type)
+            if pms_details:
+                self.pms_km_min = pms_details.get('km_min', 0)
+                self.pms_km_max = pms_details.get('km_max', 0)
+                self.pms_months = pms_details.get('months', 0)
         else:
             return {
                 'type': 'ir.actions.client',

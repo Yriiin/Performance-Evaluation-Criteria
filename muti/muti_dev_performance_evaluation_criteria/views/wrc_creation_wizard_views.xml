@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- WRC Creation Wizard View -->
+        <record id="wrc_creation_wizard_form" model="ir.ui.view">
+            <field name="name">wrc.creation.wizard.form</field>
+            <field name="model">wrc.creation.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Create WRC Record">
+                    <div class="alert alert-info" role="alert">
+                        <i class="fa fa-info-circle"/> <strong>Create WRC Record:</strong> 
+                        Select a motorcycle sale order to create a WRC record with all details automatically filled.
+                    </div>
+                    
+                    <group>
+                        <field name="sale_order_id" 
+                               options="{'no_create': True, 'no_open': True}"
+                               placeholder="Choose a motorcycle sale order..."/>
+                    </group>
+                    
+                    <footer>
+                        <button name="create_wrc_record" type="object" string="Create WRC Record" 
+                                class="btn-primary" icon="fa-plus"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- WRC Creation Wizard Action -->
+        <record id="action_wrc_creation_wizard" model="ir.actions.act_window">
+            <field name="name">Create WRC Record</field>
+            <field name="res_model">wrc.creation.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="view_id" ref="wrc_creation_wizard_form"/>
+        </record>
+
+        <!-- WRC Record Tree View - Read Only (no create button) -->
+        <record id="view_wrc_record_tree_readonly" model="ir.ui.view">
+            <field name="name">wrc.record.tree.readonly</field>
+            <field name="model">wrc.record</field>
+            <field name="inherit_id" ref="view_wrc_record_tree"/>
+            <field name="arch" type="xml">
+                <tree position="attributes">
+                    <attribute name="create">false</attribute>
+                </tree>
+            </field>
+        </record>
+    </data>
+</odoo>
