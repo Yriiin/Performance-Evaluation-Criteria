@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Main Menu -->
+    <menuitem id="menu_wrc_root"
+              name="WRC"
+              web_icon="muti_dev_performance_evaluation_criteria_PEC,static/description/icon.png"
+              sequence="10"/>
+
+    <!-- Tree View -->
+    <record id="view_wrc_information_tree" model="ir.ui.view">
+        <field name="name">wrc.information.tree</field>
+        <field name="model">wrc.information</field>
+        <field name="arch" type="xml">
+            <tree string="WRC Information">
+                <field name="name"/>
+                <field name="sale_order_id"/>
+                <field name="product_id"/>
+                <field name="purchase_date"/>
+                <field name="brand"/>
+                <field name="model"/>
+                <field name="engine_no"/>
+                <field name="chassis_no"/>
+                <field name="classification_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_wrc_information_form" model="ir.ui.view">
+        <field name="name">wrc.information.form</field>
+        <field name="model">wrc.information</field>
+        <field name="arch" type="xml">
+            <form string="WRC Information">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="WRC Number"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Customer Profile" name="customer_profile">
+                            <field name="customer_id"/>
+                            <field name="customer_address" readonly="1"/>
+                            <field name="customer_phone"/>
+                            <field name="customer_email"/>
+                            <field name="customer_street" invisible="1"/>
+                            <field name="customer_street2" invisible="1"/>
+                            <field name="customer_city" invisible="1"/>
+                            <field name="customer_state_id" invisible="1"/>
+                            <field name="customer_zip" invisible="1"/>
+                        </group>
+                        <group string="Dealer Profile" name="dealer_profile">
+                            <field name="selling_dealer_id"/>
+                            <field name="dealer_code"/>
+                            <field name="dealer_address" readonly="1"/>
+                            <field name="dealer_street" invisible="1"/>
+                            <field name="dealer_street2" invisible="1"/>
+                            <field name="dealer_city" invisible="1"/>
+                            <field name="dealer_state_id" invisible="1"/>
+                            <field name="dealer_zip" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Unit Information" name="unit_information">
+                        <group>
+                            <field name="model"/>
+                            <field name="engine_no"/>
+                            <field name="chassis_no"/>
+                            <field name="purchase_date"/>
+                            <field name="color"/>
+                        </group>
+                        <group>
+                            <field name="brand"/>
+                            <field name="payment_basis"/>
+                            <field name="quantity"/>
+                            <field name="classification_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_wrc_information_search" model="ir.ui.view">
+        <field name="name">wrc.information.search</field>
+        <field name="model">wrc.information</field>
+        <field name="arch" type="xml">
+            <search string="Search WRC Information">
+                <field name="name"/>
+                <field name="sale_order_id"/>
+                <field name="product_id"/>
+                <field name="brand"/>
+                <field name="model"/>
+                <field name="engine_no"/>
+                <field name="chassis_no"/>
+                <field name="classification_id"/>
+                <group expand="0" string="Group By">
+                    <filter string="Sale Order" name="group_by_sale_order" domain="[]" context="{'group_by':'sale_order_id'}"/>
+                    <filter string="Product" name="group_by_product" domain="[]" context="{'group_by':'product_id'}"/>
+                    <filter string="Classification" name="group_by_classification" domain="[]" context="{'group_by':'classification_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_wrc_information" model="ir.actions.act_window">
+        <field name="name">WRC Information</field>
+        <field name="res_model">wrc.information</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first WRC Information record!
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_wrc_information"
+              name="WRC Information"
+              parent="menu_wrc_root"
+              action="action_wrc_information"
+              sequence="10"/>
+</odoo>

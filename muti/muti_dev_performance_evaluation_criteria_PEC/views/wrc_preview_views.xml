@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_order_form_with_wrc" model="ir.ui.view">
+        <field name="name">sale.order.form.with.wrc</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="WRC Information" name="wrc_info" attrs="{'invisible': ['|', ('awb_sale_type', '!=', 'mc'), ('has_honda_products', '=', False)]}">
+                    <field name="state" invisible="1"/>
+                    <field name="awb_sale_type" invisible="1"/>
+                    <field name="has_honda_products" invisible="1"/>
+                    <field name="wrc_preview_ids" mode="tree,form" widget="one2many" context="{'default_sale_order_id': active_id}">
+                        <tree editable="bottom" create="false" delete="false" js_class="preview_list_view">
+                            <field name="wrc_number" required="1"/>
+                            <field name="purchase_date"/>
+                            <field name="product_id"/>
+                            <field name="model"/>
+                            <field name="brand"/>
+                            <field name="engine_no"/>
+                            <field name="chassis_no"/>
+                            <field name="classification_id"/>
+                            <field name="sale_order_id" invisible="1"/>
+                            <field name="sale_order_line_id" invisible="1"/>
+                            <button name="action_view_wrc" 
+                                    type="object" 
+                                    icon="fa-external-link" 
+                                    help="View WRC Details"
+                                    attrs="{'invisible': [('wrc_number', '=', False)]}"/>
+                        </tree>
+                        <form>
+                            <sheet>
+                                <div class="oe_title">
+                                    <h1>
+                                        <field name="wrc_number" placeholder="WRC Number"/>
+                                    </h1>
+                                </div>
+                                <group>
+                                    <group string="Customer Profile" name="customer_profile">
+                                        <field name="customer_id"/>
+                                        <field name="customer_address" readonly="1"/>
+                                        <field name="customer_phone"/>
+                                        <field name="customer_email"/>
+                                        <field name="customer_street" invisible="1"/>
+                                        <field name="customer_street2" invisible="1"/>
+                                        <field name="customer_city" invisible="1"/>
+                                        <field name="customer_state_id" invisible="1"/>
+                                        <field name="customer_zip" invisible="1"/>
+                                    </group>
+                                    <group string="Dealer Profile" name="dealer_profile">
+                                        <field name="selling_dealer_id"/>
+                                        <field name="dealer_code"/>
+                                        <field name="dealer_address" readonly="1"/>
+                                        <field name="dealer_street" invisible="1"/>
+                                        <field name="dealer_street2" invisible="1"/>
+                                        <field name="dealer_city" invisible="1"/>
+                                        <field name="dealer_state_id" invisible="1"/>
+                                        <field name="dealer_zip" invisible="1"/>
+                                    </group>
+                                </group>
+                                <group string="Unit Information" name="unit_information">
+                                    <group>
+                                        <field name="model"/>
+                                        <field name="engine_no"/>
+                                        <field name="chassis_no"/>
+                                        <field name="purchase_date"/>
+                                        <field name="color"/>
+                                    </group>
+                                    <group>
+                                        <field name="brand"/>
+                                        <field name="payment_basis"/>
+                                        <field name="quantity"/>
+                                        <field name="classification_id"/>
+                                    </group>
+                                </group>
+                            </sheet>
+                        </form>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

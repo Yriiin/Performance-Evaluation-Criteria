@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Actions -->
+    <!-- Internal WRC Action -->
+    <record id="action_wrc_internal" model="ir.actions.act_window">
+        <field name="name">Internal WRC</field>
+        <field name="res_model">wrc.information</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="oe_view_nocontent_create">
+                Internal WRC records are created automatically from Sales Orders.
+            </p>
+        </field>
+    </record>
+
+    <!-- External WRC Action -->
+    <record id="action_wrc_external" model="ir.actions.act_window">
+        <field name="name">External WRC</field>
+        <field name="res_model">wrc.external</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="oe_view_nocontent_create">Create external WRC records here.</p>
+        </field>
+    </record>
+
+    <!-- Classification Action -->
+    <record id="action_wrc_classification" model="ir.actions.act_window">
+        <field name="name">WRC Classifications</field>
+        <field name="res_model">wrc.classification</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="oe_view_nocontent_create">Configure WRC classifications used to categorize units.</p>
+        </field>
+    </record>
+
+    <!-- Reports Action -->
+    <record id="action_wrc_reports" model="ir.actions.act_window">
+        <field name="name">WRC Analysis</field>
+        <field name="res_model">wrc.information</field>
+        <field name="view_mode">pivot,graph,tree</field>
+        <field name="context">{
+            'search_default_group_by_brand': 1,
+            'search_default_group_by_classification': 1
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No WRC records to analyze yet!
+            </p>
+            <p>
+                Create WRC records through Sales Orders to see the analysis here.
+            </p>
+        </field>
+    </record>
+
+    <!-- Views -->
+    <!-- External WRC Views -->
+    <record id="view_wrc_external_tree" model="ir.ui.view">
+        <field name="name">wrc.external.tree</field>
+        <field name="model">wrc.external</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="product_id"/>
+                <field name="purchase_date"/>
+                <field name="brand"/>
+                <field name="model"/>
+                <field name="engine_no"/>
+                <field name="frame_no"/>
+                <field name="classification_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_wrc_external_form" model="ir.ui.view">
+        <field name="name">wrc.external.form</field>
+        <field name="model">wrc.external</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="partner_id"/>
+                        <field name="product_id"/>
+                        <field name="purchase_date"/>
+                        <field name="brand"/>
+                        <field name="model"/>
+                        <field name="engine_no"/>
+                        <field name="frame_no"/>
+                        <field name="classification_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Classification Views -->
+    <record id="view_wrc_classification_tree" model="ir.ui.view">
+        <field name="name">wrc.classification.tree</field>
+        <field name="model">wrc.classification</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_wrc_classification_form" model="ir.ui.view">
+        <field name="name">wrc.classification.form</field>
+        <field name="model">wrc.classification</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Report Views -->
+    <record id="view_wrc_information_graph" model="ir.ui.view">
+        <field name="name">wrc.information.graph</field>
+        <field name="model">wrc.information</field>
+        <field name="arch" type="xml">
+            <graph string="WRC Analysis" type="bar">
+                <field name="brand" type="row"/>
+                <field name="classification_id" type="col"/>
+                <field name="id" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_wrc_information_pivot" model="ir.ui.view">
+        <field name="name">wrc.information.pivot</field>
+        <field name="model">wrc.information</field>
+        <field name="arch" type="xml">
+            <pivot string="WRC Analysis">
+                <field name="brand" type="row"/>
+                <field name="classification_id" type="col"/>
+                <field name="id" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Menu Structure -->
+    <!-- Root Menu -->
+    <menuitem id="menu_wrc_root"
+              name="WRC"
+              web_icon="muti_dev_performance_evaluation_criteria_PEC,static/description/icon.png"
+              sequence="10"/>
+
+    <!-- Records Menu -->
+    <menuitem id="menu_wrc_records"
+              name="WRC Records"
+              parent="menu_wrc_root"
+              sequence="10"/>
+
+    <menuitem id="menu_wrc_internal"
+              name="Internal WRC"
+              parent="menu_wrc_records"
+              action="action_wrc_internal"
+              sequence="10"/>
+
+    <menuitem id="menu_wrc_external"
+              name="External WRC"
+              parent="menu_wrc_records"
+              action="action_wrc_external"
+              sequence="20"/>
+
+    <!-- Reports Menu -->
+    <menuitem id="menu_wrc_reports"
+              name="Reports"
+              parent="menu_wrc_root"
+              sequence="20"/>
+
+    <menuitem id="menu_wrc_analysis"
+              name="WRC Analysis"
+              parent="menu_wrc_reports"
+              action="action_wrc_reports"
+              sequence="10"/>
+
+    <!-- Configuration Menu -->
+    <menuitem id="menu_wrc_config"
+              name="Configuration"
+              parent="menu_wrc_root"
+              sequence="30"/>
+
+    <menuitem id="menu_wrc_classification_menu"
+              name="Classifications" 
+              parent="menu_wrc_config"
+              action="action_wrc_classification"
+              sequence="10"/>
+</odoo>

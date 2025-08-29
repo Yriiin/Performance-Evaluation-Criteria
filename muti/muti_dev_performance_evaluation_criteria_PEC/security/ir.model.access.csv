@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_wrc_information,wrc.information,model_wrc_information,,1,1,1,1
+access_wrc_external,wrc.external,model_wrc_external,,1,1,1,1
+access_wrc_classification,wrc.classification,model_wrc_classification,,1,1,1,1
+access_wrc_preview,wrc.preview,model_wrc_preview,,1,1,1,1
