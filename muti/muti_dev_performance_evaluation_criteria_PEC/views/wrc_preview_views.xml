@@ -6,7 +6,7 @@
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
-                <page string="WRC Information" name="wrc_info" attrs="{'invisible': ['|', ('awb_sale_type', '!=', 'mc'), ('has_honda_products', '=', False)]}">
+                <page string="WRC Information" name="wrc_info" attrs="{'invisible': ['|',('awb_sale_type','!=','mc'),('has_honda_products','=',False)]}">
                     <field name="state" invisible="1"/>
                     <field name="awb_sale_type" invisible="1"/>
                     <field name="has_honda_products" invisible="1"/>

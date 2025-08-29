@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 
-
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
@@ -13,11 +12,18 @@ class SaleOrder(models.Model):
     @api.depends('order_line.product_id')
     def _compute_has_honda_products(self):
         for order in self:
-            # Check if any product name contains "HONDA"
-            order.has_honda_products = any(
-                line.product_id and 'HONDA' in line.product_id.name.upper()
-                for line in order.order_line
-            )
+            # Initialize as False
+            order.has_honda_products = False
+            
+            for line in order.order_line:
+                if not line.product_id:
+                    continue
+                
+                # Check if product default code starts with 'HO'
+                default_code = line.product_id.default_code or ''
+                if default_code.startswith('HO'):
+                    order.has_honda_products = True
+                    break
     @api.model
     def create(self, vals):
         record = super(SaleOrder, self).create(vals)
@@ -29,8 +35,11 @@ class SaleOrder(models.Model):
         result = super(SaleOrder, self).write(vals)
         if 'awb_sale_type' in vals or 'order_line' in vals:
             for order in self:
+                # Refresh WRC preview if needed
                 if order.awb_sale_type == 'mc':
                     self.env['wrc.preview'].refresh_from_order(order.id)
+                # Force recompute has_honda_products
+                order._compute_has_honda_products()
         return result
 
     @api.model
@@ -41,16 +50,11 @@ class SaleOrder(models.Model):
             self.env['wrc.preview'].refresh_from_order(order.id)
         return True
 
-    def action_recompute_honda_products(self):
-        """Force recompute and store has_honda_products field."""
-        self._compute_has_honda_products()
-        self.env.cr.commit()  # Force store the recomputed values
-        return True
-
     @api.model
-    def recompute_all_honda_products(self):
-        """Recompute has_honda_products for all sales orders."""
-        orders = self.search([])
+    def recompute_honda_products(self):
+        """Recompute has_honda_products for sales orders."""
+        # Find orders that might need recomputation
+        orders = self.search([('awb_sale_type', 'ilike', 'motorcycle')])
         for order in orders:
-            order.action_recompute_honda_products()
+            order._compute_has_honda_products()
         return True
